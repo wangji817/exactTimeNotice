@@ -1,0 +1,286 @@
+:root {
+  --bg: #14100c;
+  --card: #241910;
+  --gold: #d4a84b;
+  --gold-soft: #e8c978;
+  --ink: #f3e6d0;
+  --muted: #b9a68a;
+  --green: #07c160;
+  --danger: #d4654a;
+  --font-display: "STXingkai", "华文行楷", "KaiTi", "楷体", serif;
+  --font-body: "Source Han Sans SC", "Noto Sans SC", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse at top, rgba(180, 70, 40, 0.2), transparent 45%),
+    radial-gradient(ellipse at bottom, rgba(212, 168, 75, 0.12), transparent 40%),
+    linear-gradient(165deg, #100c09, #1b140f 50%, #120e0a);
+}
+
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: min(420px, 100%);
+  background: linear-gradient(180deg, rgba(46, 33, 22, 0.96), rgba(24, 17, 12, 0.96));
+  border: 1px solid rgba(212, 168, 75, 0.3);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  padding: 28px 24px 22px;
+  animation: rise 0.6s ease both;
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.seal {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: #fff4df;
+  background: radial-gradient(circle at 30% 30%, #d4654a, #8c2a20);
+  border: 2px solid rgba(232, 201, 120, 0.55);
+  box-shadow: 0 8px 20px rgba(140, 42, 32, 0.35);
+}
+
+.seal.mini {
+  width: 48px;
+  height: 48px;
+  font-size: 1.35rem;
+}
+
+.login-brand h1,
+.confirm-card h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--gold-soft);
+}
+
+.login-brand p,
+.confirm-card .sub {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+}
+
+.qr-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.qr-frame {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.qr-frame img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.qr-mask {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #333;
+  font-size: 0.92rem;
+}
+
+/* 必须显式覆盖，否则 display:flex 会压过 HTML hidden */
+.qr-mask[hidden] {
+  display: none !important;
+}
+
+.btn-refresh,
+.btn-confirm {
+  appearance: none;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font: inherit;
+  cursor: pointer;
+  background: linear-gradient(135deg, #2aae67, var(--green));
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-confirm {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 16px;
+  font-size: 1rem;
+}
+
+.qr-status {
+  margin-top: 6px;
+  color: var(--gold-soft);
+  font-size: 0.95rem;
+}
+
+.qr-hint,
+.lan-hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.lan-hint code {
+  color: var(--gold);
+}
+
+.login-foot {
+  margin-top: 22px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}
+
+.enter-panel {
+  text-align: center;
+}
+
+.enter-desc {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.65;
+  text-align: left;
+}
+
+.enter-desc strong {
+  color: var(--gold-soft);
+}
+
+.pass-wrap {
+  text-align: left;
+  margin: 0 0 14px;
+}
+
+.pass-wrap label {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.pass-wrap input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(212, 168, 75, 0.25);
+  background: rgba(12, 9, 6, 0.55);
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+
+.pass-wrap input:focus {
+  border-color: var(--gold);
+}
+
+.divider {
+  margin: 22px 0 16px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+}
+
+.confirm-body {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.confirm-card {
+  width: min(400px, 100%);
+  background: linear-gradient(180deg, rgba(46, 33, 22, 0.96), rgba(24, 17, 12, 0.96));
+  border: 1px solid rgba(212, 168, 75, 0.3);
+  border-radius: 18px;
+  padding: 28px 22px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.field-label {
+  display: block;
+  text-align: left;
+  margin: 16px 0 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.confirm-card input {
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(212, 168, 75, 0.25);
+  background: rgba(12, 9, 6, 0.55);
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+
+.confirm-card input:focus {
+  border-color: var(--gold);
+}
+
+.confirm-msg {
+  margin-top: 14px;
+  min-height: 1.2em;
+  font-size: 0.9rem;
+  color: var(--gold-soft);
+}
+
+.confirm-msg.err {
+  color: var(--danger);
+}
+
+.confirm-msg.ok {
+  color: #6fbf8f;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

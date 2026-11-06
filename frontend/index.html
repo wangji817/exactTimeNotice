@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>三国群雄传平台司令台</title>
+  <link rel="stylesheet" href="/static/css/style.css?v=20261106d" />
+</head>
+<body>
+  <div class="app">
+    <header class="hero">
+      <h1 class="brand">
+        三国群雄传平台司令台
+        <span>EXACT TIME NOTICE · 本地配置 · PC 微信群播报</span>
+      </h1>
+      <div class="hero-actions">
+        <div class="status-pill" id="userPill" title="当前登录用户">
+          <span class="status-dot"></span>
+          <span id="userName">未登录</span>
+        </div>
+        <div class="status-pill" id="statusPill">
+          <span class="status-dot warn" id="statusDot"></span>
+          <span id="statusText">连接中…</span>
+        </div>
+        <button class="btn btn-ghost" id="btnReloadJobs">刷新任务</button>
+        <button class="btn btn-jade" id="btnSave">保存并即时生效</button>
+        <button class="btn btn-ghost" id="btnLogout">退出登录</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="stack main-stack">
+        <!-- 微信连接 -->
+        <section class="panel" id="panelWechat">
+          <div class="panel-title">
+            <h2>微信连接</h2>
+          </div>
+          <p class="panel-desc">使用本机已登录的官方 PC 微信向指定群发送播报。群名须与微信群名称完全一致。</p>
+          <div class="field">
+            <label>目标微信群名称</label>
+            <input type="text" id="groupName" placeholder="例如：三国群雄传-本盟" />
+          </div>
+          <div class="toggle-row">
+            <div>
+              <strong>演练模式（Dry Run）</strong>
+              <div class="hint">开启后只记录日志，不真实发送到微信</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="dryRun" />
+              <span></span>
+            </label>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" id="btnTestWechat">测试连接</button>
+            <button class="btn btn-primary" id="btnPreview">试发一条测试消息</button>
+          </div>
+        </section>
+
+        <!-- 抢台子 -->
+        <section class="panel">
+          <div class="panel-title">
+            <h2>① 抢台子</h2>
+            <label class="toggle">
+              <input type="checkbox" id="qtEnabled" />
+              <span></span>
+            </label>
+          </div>
+          <p class="panel-desc">周一至周日，每日 9 点–24 点，整点前 N 分钟播报。周日 24 点可关闭。</p>
+          <div class="row">
+            <div class="field">
+              <label>开始整点</label>
+              <input type="number" id="qtStart" min="0" max="24" />
+            </div>
+            <div class="field">
+              <label>结束整点</label>
+              <input type="number" id="qtEnd" min="0" max="24" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>提前分钟数</label>
+              <input type="number" id="qtAdvance" min="0" max="59" />
+            </div>
+            <div class="field" style="display:flex;align-items:flex-end;">
+              <div class="toggle-row" style="width:100%;margin:0;">
+                <div>
+                  <strong>周日 24 点跳过</strong>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="qtSkipSun24" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label>播报文案（可用 {advance} {hour}）</label>
+            <textarea id="qtMessage"></textarea>
+          </div>
+        </section>
+
+        <!-- 坚守 -->
+        <section class="panel">
+          <div class="panel-title">
+            <h2>② 坚守城池</h2>
+            <label class="toggle">
+              <input type="checkbox" id="jsEnabled" />
+              <span></span>
+            </label>
+          </div>
+          <p class="panel-desc">周一至周日，在选定时刻播报坚守城池（默认 12:00、12:30）。</p>
+          <div class="field">
+            <label>播报时刻（可多选）</label>
+            <div class="chips" id="jsTimes"></div>
+          </div>
+          <div class="field">
+            <label>城池（可多选）</label>
+            <div class="chips" id="jsCities"></div>
+          </div>
+          <div class="field">
+            <label>播报文案（可用 {cities}）</label>
+            <textarea id="jsMessage"></textarea>
+          </div>
+        </section>
+
+        <!-- 镇国台子 -->
+        <section class="panel">
+          <div class="panel-title">
+            <h2>③ 镇国台子</h2>
+            <label class="toggle">
+              <input type="checkbox" id="zgEnabled" />
+              <span></span>
+            </label>
+          </div>
+          <p class="panel-desc">按星期与整点配置，提前播报并 @ 固定成员。成员昵称须与群内显示名一致。</p>
+          <div class="field">
+            <label>星期（可多选）</label>
+            <div class="chips" id="zgWeekdays"></div>
+          </div>
+          <div class="field">
+            <label>整点（可多选）</label>
+            <div class="chips" id="zgHours"></div>
+          </div>
+          <div class="field">
+            <label>提前分钟数</label>
+            <input type="number" id="zgAdvance" min="0" max="59" />
+          </div>
+          <div class="field">
+            <label>@ 成员（与群内昵称一致）</label>
+            <div class="inline-add">
+              <input type="text" id="zgMemberInput" placeholder="输入群内昵称后添加" />
+              <button class="btn btn-ghost" id="btnAddMember" type="button">添加</button>
+            </div>
+            <div class="member-list" id="zgMembers"></div>
+          </div>
+          <div class="field">
+            <label>播报文案（可用 {advance} {hour}）</label>
+            <textarea id="zgMessage"></textarea>
+          </div>
+        </section>
+
+        <!-- 四方都城 -->
+        <section class="panel">
+          <div class="panel-title">
+            <h2>④ 四方都城</h2>
+            <label class="toggle">
+              <input type="checkbox" id="sfEnabled" />
+              <span></span>
+            </label>
+          </div>
+          <p class="panel-desc">默认周一至周五 13:00，播报进攻/防守四方都城。</p>
+          <div class="field">
+            <label>星期（可多选，默认工作日）</label>
+            <div class="chips" id="sfWeekdays"></div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>小时</label>
+              <input type="number" id="sfHour" min="0" max="23" />
+            </div>
+            <div class="field">
+              <label>分钟</label>
+              <input type="number" id="sfMinute" min="0" max="59" />
+            </div>
+          </div>
+          <div class="field">
+            <label>模式</label>
+            <div class="chips" id="sfMode"></div>
+          </div>
+          <div class="field">
+            <label>都城（可多选）</label>
+            <div class="chips" id="sfCities"></div>
+          </div>
+          <div class="field">
+            <label>播报文案（可用 {mode} {cities}）</label>
+            <textarea id="sfMessage"></textarea>
+          </div>
+        </section>
+      </div>
+
+      <aside class="stack side-stack">
+        <section class="panel side-panel">
+          <div class="panel-title">
+            <h2>待执行任务</h2>
+          </div>
+          <p class="panel-desc">保存配置后即时重载。以下为调度器中即将触发的任务。</p>
+          <div class="jobs" id="jobsList">
+            <div class="empty">加载中…</div>
+          </div>
+        </section>
+
+        <section class="panel side-panel">
+          <div class="panel-title">
+            <h2>播报日志</h2>
+            <button class="btn btn-ghost" id="btnRefreshLogs">刷新</button>
+          </div>
+          <div class="logs" id="logsList">
+            <div class="empty">暂无日志</div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/static/js/app.js?v=20261106c"></script>
+</body>
+</html>
