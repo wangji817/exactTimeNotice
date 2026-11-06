@@ -1,0 +1,4 @@
+2026-11-06 10:43:52.451 <stdin>[42] <module> -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2026-11-06 10:44:02.536 <stdin>[42] <module> -> Find Control Timeout(10s): {ClassName: 'WeChatLoginWndForPC', ControlType: WindowControl}
+2026-11-06 10:44:12.621 <stdin>[42] <module> -> Find Control Timeout(10s): {Name: '微信', ClassName: 'Qt51514QWindowIcon', ControlType: WindowControl}
+2026-11-06 10:44:22.693 <stdin>[42] <module> -> Find Control Timeout(10s): {Name: '微信', ControlType: WindowControl}

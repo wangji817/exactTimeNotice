@@ -3,12 +3,12 @@
     "server_port": 8765
   },
   "wechat": {
-    "group_name": "三国测试组",
+    "group_name": "中年男人的浪漫",
     "dry_run": false,
     "wake_hotkey": "ctrl+alt+w"
   },
   "qiang_taizi": {
-    "enabled": false,
+    "enabled": true,
     "advance_minutes": 5,
     "start_hour": 9,
     "end_hour": 24,
@@ -16,7 +16,7 @@
     "message": "⏰ 抢台子提醒：还有 {advance} 分钟到整点，请准备抢台！"
   },
   "jian_shou": {
-    "enabled": false,
+    "enabled": true,
     "times": [
       "12:00",
       "12:30"
@@ -28,7 +28,7 @@
     "message": "🛡️ 坚守提醒：请坚守【{cities}】！"
   },
   "zhen_guo": {
-    "enabled": false,
+    "enabled": true,
     "weekdays": [
       1,
       2,
@@ -38,15 +38,24 @@
       6,
       7
     ],
-    "hours": [],
-    "advance_minutes": 1,
+    "hours": [
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "advance_minutes": 5,
     "members": [
-      "无缘"
+      "虚情（泰信严父）",
+      "浮尘",
+      "好无聊啊",
+      "神丶初晗(鹿玖)"
     ],
     "message": "🏯 镇国台子提醒：还有 {advance} 分钟到整点，请相关成员就位！"
   },
   "si_fang": {
-    "enabled": false,
+    "enabled": true,
     "weekdays": [
       1,
       2,
@@ -64,7 +73,7 @@
     "message": "⚔️ 还有 {advance} 分钟：{mode}四方都城【{cities}】！"
   },
   "liu_kou": {
-    "enabled": false,
+    "enabled": true,
     "times": [
       "10:00",
       "15:00"
