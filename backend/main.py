@@ -25,6 +25,8 @@ PUBLIC_PATHS = {
     "/api/auth/local_enter",
     "/api/auth/me",
     "/api/auth/logout",
+    "/api/wechat/status",
+    "/api/wechat/wake",
 }
 
 
@@ -156,6 +158,18 @@ def get_logs(limit: int = 50):
     return {"logs": wechat_sender.get_logs(limit)}
 
 
+@app.get("/api/wechat/status")
+def wechat_status():
+    """登录页可用：检测本机 PC 微信进程/窗口（不强制唤醒）。"""
+    return wechat_sender.probe_status(try_wake=False)
+
+
+@app.post("/api/wechat/wake")
+def wechat_wake():
+    """登录页可用：尝试用快捷键唤醒微信并回报状态。"""
+    return wechat_sender.probe_status(try_wake=True)
+
+
 @app.post("/api/wechat/test")
 def test_wechat():
     return wechat_sender.test_connection()
@@ -168,7 +182,9 @@ def preview_broadcast(body: dict):
     members = body.get("members") or []
     if not message:
         raise HTTPException(status_code=400, detail="消息内容不能为空")
-    log = wechat_sender.send(feature, message, at_members=members)
+    log = wechat_sender.send(
+        feature, message, at_members=members, immediate=True
+    )
     return log
 
 

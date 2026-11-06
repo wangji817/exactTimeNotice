@@ -17,7 +17,7 @@ class WechatConfig(BaseModel):
 
 
 class QiangTaiziConfig(BaseModel):
-    enabled: bool = True
+    enabled: bool = False
     advance_minutes: int = Field(default=5, ge=0, le=59)
     start_hour: int = Field(default=9, ge=0, le=24)
     end_hour: int = Field(default=24, ge=0, le=24)
@@ -26,7 +26,7 @@ class QiangTaiziConfig(BaseModel):
 
 
 class JianShouConfig(BaseModel):
-    enabled: bool = True
+    enabled: bool = False
     # 播报时刻，格式 HH:MM；默认 12:00、12:30
     times: list[str] = Field(default_factory=lambda: ["12:00", "12:30"])
     cities: list[str] = Field(default_factory=lambda: ["益州", "扬州", "兖州"])
@@ -55,15 +55,24 @@ class ZhenGuoConfig(BaseModel):
 
 
 class SiFangConfig(BaseModel):
-    enabled: bool = True
+    enabled: bool = False
     weekdays: list[int] = Field(default_factory=lambda: [1, 2, 3, 4, 5])
     hour: int = Field(default=13, ge=0, le=23)
     minute: int = Field(default=0, ge=0, le=59)
+    advance_minutes: int = Field(default=5, ge=0, le=59)
     mode: Literal["进攻", "防守"] = "进攻"
     cities: list[str] = Field(
         default_factory=lambda: ["许昌", "成都", "长沙", "建业"]
     )
-    message: str = "⚔️ {mode}四方都城：【{cities}】！"
+    message: str = "⚔️ 还有 {advance} 分钟：{mode}四方都城【{cities}】！"
+
+
+class LiuKouConfig(BaseModel):
+    enabled: bool = False
+    # 播报时刻，格式 HH:MM；默认上午 10:00、下午 15:00
+    times: list[str] = Field(default_factory=lambda: ["10:00", "15:00"])
+    advance_minutes: int = Field(default=5, ge=0, le=59)
+    message: str = "🏴 流寇攻城提醒：还有 {advance} 分钟，请注意防守城池！"
 
 
 class AppSettings(BaseModel):
@@ -73,6 +82,7 @@ class AppSettings(BaseModel):
     jian_shou: JianShouConfig = Field(default_factory=JianShouConfig)
     zhen_guo: ZhenGuoConfig = Field(default_factory=ZhenGuoConfig)
     si_fang: SiFangConfig = Field(default_factory=SiFangConfig)
+    liu_kou: LiuKouConfig = Field(default_factory=LiuKouConfig)
 
 
 class BroadcastLog(BaseModel):

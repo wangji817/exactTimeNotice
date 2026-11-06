@@ -40,6 +40,7 @@ class BroadcastScheduler:
         self._register_jian_shou(settings)
         self._register_zhen_guo(settings)
         self._register_si_fang(settings)
+        self._register_liu_kou(settings)
         print(
             f"[Scheduler] 任务已重载，当前任务数：{len(self.scheduler.get_jobs())}"
         )
@@ -189,17 +190,23 @@ class BroadcastScheduler:
         if not py_days:
             return
         day_of_week = ",".join(str(d) for d in py_days)
+        fire_hour, fire_minute = _shift_back(
+            cfg.hour, cfg.minute, cfg.advance_minutes
+        )
         self.scheduler.add_job(
             self._fire_si_fang,
             CronTrigger(
                 day_of_week=day_of_week,
-                hour=cfg.hour,
-                minute=cfg.minute,
+                hour=fire_hour,
+                minute=fire_minute,
                 second=0,
                 timezone="Asia/Shanghai",
             ),
             id="si_fang",
-            name=f"四方都城-{cfg.hour:02d}:{cfg.minute:02d}",
+            name=(
+                f"四方都城-{cfg.hour:02d}:{cfg.minute:02d}"
+                f"（提前{cfg.advance_minutes}分）"
+            ),
             replace_existing=True,
             misfire_grace_time=60,
         )
@@ -213,8 +220,57 @@ class BroadcastScheduler:
         if today not in cfg.weekdays:
             return
         cities = "】【".join(cfg.cities)
-        msg = cfg.message.format(mode=cfg.mode, cities=cities)
+        msg = cfg.message.format(
+            mode=cfg.mode,
+            cities=cities,
+            advance=cfg.advance_minutes,
+            hour=cfg.hour,
+            minute=cfg.minute,
+        )
         wechat_sender.send("四方都城", msg)
+
+    # ---------- 流寇攻城 ----------
+    def _register_liu_kou(self, settings: AppSettings) -> None:
+        cfg = settings.liu_kou
+        if not cfg.enabled or not cfg.times:
+            return
+        advance = cfg.advance_minutes
+        for raw in cfg.times:
+            parsed = _parse_hm(raw)
+            if not parsed:
+                continue
+            hour, minute = parsed
+            label = f"{hour:02d}:{minute:02d}"
+            fire_hour, fire_minute = _shift_back(hour, minute, advance)
+            self.scheduler.add_job(
+                self._fire_liu_kou,
+                CronTrigger(
+                    day_of_week="mon-sun",
+                    hour=fire_hour,
+                    minute=fire_minute,
+                    second=0,
+                    timezone="Asia/Shanghai",
+                ),
+                id=f"liu_kou_{label}",
+                name=f"流寇攻城-{label}（提前{advance}分）",
+                args=[hour, minute],
+                replace_existing=True,
+                misfire_grace_time=60,
+            )
+
+    def _fire_liu_kou(self, target_hour: int, target_minute: int) -> None:
+        settings = config_manager.get()
+        cfg = settings.liu_kou
+        if not cfg.enabled:
+            return
+        label = f"{target_hour:02d}:{target_minute:02d}"
+        msg = cfg.message.format(
+            advance=cfg.advance_minutes,
+            time=label,
+            hour=target_hour,
+            minute=target_minute,
+        )
+        wechat_sender.send("流寇攻城", msg)
 
 
 def _parse_hm(value: str) -> tuple[int, int] | None:

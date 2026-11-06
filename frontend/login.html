@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>登录 · 三国群雄传平台司令台</title>
-  <link rel="stylesheet" href="/static/css/login.css" />
+  <link rel="stylesheet" href="/static/css/login.css?v=20261106h" />
 </head>
 <body>
   <div class="login-shell">
@@ -19,16 +19,26 @@
         <p class="enter-desc">
           请先登录本机<strong>官方 PC 微信</strong>，再进入司令台配置定时群播报。
         </p>
+
+        <div class="wx-status" id="wxStatus" data-level="warn">
+          <span class="wx-dot" id="wxDot"></span>
+          <div class="wx-status-text">
+            <strong id="wxTitle">正在检测 PC 微信…</strong>
+            <div class="hint" id="wxDetail">请稍候</div>
+          </div>
+          <button type="button" class="btn-wake" id="btnWakeWx" hidden>尝试唤醒</button>
+        </div>
+
         <button type="button" class="btn-confirm" id="btnLocalEnter">进入司令台</button>
         <div class="confirm-msg" id="localMsg"></div>
       </div>
 
       <div class="login-foot">
-        保持微信已登录；发送时窗口可能被短暂置前。
+        保持微信已登录；发送时窗口可能被短暂置前/收起。
       </div>
     </div>
   </div>
 
-  <script src="/static/js/login.js"></script>
+  <script src="/static/js/login.js?v=20261106h"></script>
 </body>
 </html>

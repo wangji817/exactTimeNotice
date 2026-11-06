@@ -13,6 +13,7 @@ const SF_CITY_OPTIONS = ["许昌", "成都", "长沙", "建业"];
 const SF_MODES = ["进攻", "防守"];
 const HOUR_OPTIONS_0_23 = Array.from({ length: 24 }, (_, i) => i);
 const JS_TIME_OPTIONS = ["12:00", "12:30"];
+const LK_TIME_OPTIONS = ["10:00", "15:00"];
 
 let settings = null;
 let zgMembers = [];
@@ -137,6 +138,7 @@ function fillForm(data) {
   const js = data.jian_shou || {};
   const zg = data.zhen_guo || {};
   const sf = data.si_fang || {};
+  const lk = data.liu_kou || {};
 
   setValue("groupName", wechat.group_name || "");
   setChecked("dryRun", wechat.dry_run);
@@ -224,6 +226,7 @@ function fillForm(data) {
   setChecked("sfEnabled", sf.enabled);
   setValue("sfHour", sf.hour);
   setValue("sfMinute", sf.minute);
+  setValue("sfAdvance", sf.advance_minutes ?? 5);
   setValue("sfMessage", sf.message || "");
   settings.si_fang = settings.si_fang || sf;
 
@@ -260,6 +263,53 @@ function fillForm(data) {
     );
   };
   bindSfCities();
+
+  setChecked("lkEnabled", lk.enabled);
+  setValue("lkAdvance", lk.advance_minutes ?? 5);
+  setValue("lkMessage", lk.message || "");
+  settings.liu_kou = settings.liu_kou || lk;
+  {
+    let times = (settings.liu_kou.times || []).filter((t) =>
+      LK_TIME_OPTIONS.includes(t)
+    );
+    if (!times.length) {
+      times = [...LK_TIME_OPTIONS];
+    }
+    settings.liu_kou.times = times;
+  }
+  const bindLkTimes = () => {
+    renderChips(
+      $("lkTimes"),
+      LK_TIME_OPTIONS,
+      settings.liu_kou.times || [...LK_TIME_OPTIONS],
+      (next) => {
+        settings.liu_kou.times = next.slice().sort();
+        bindLkTimes();
+      }
+    );
+  };
+  bindLkTimes();
+
+  syncFeaturePanels();
+}
+
+function syncFeaturePanels() {
+  const map = [
+    ["qtEnabled", "panelQt"],
+    ["jsEnabled", "panelJs"],
+    ["zgEnabled", "panelZg"],
+    ["sfEnabled", "panelSf"],
+    ["lkEnabled", "panelLk"],
+  ];
+  map.forEach(([toggleId, panelId]) => {
+    const on = !!($(toggleId) && $(toggleId).checked);
+    const panel = $(panelId);
+    if (panel) panel.classList.toggle("is-off", !on);
+    document.querySelectorAll(`.panel-state[data-for="${toggleId}"]`).forEach((el) => {
+      el.textContent = on ? "已开启" : "已关闭";
+      el.classList.toggle("on", on);
+    });
+  });
 }
 
 function collectForm() {
@@ -300,9 +350,16 @@ function collectForm() {
       weekdays: settings.si_fang.weekdays || [],
       hour: Number($("sfHour").value || 13),
       minute: Number($("sfMinute").value || 0),
+      advance_minutes: Number($("sfAdvance").value || 0),
       mode: settings.si_fang.mode || "进攻",
       cities: settings.si_fang.cities || [],
       message: $("sfMessage").value,
+    },
+    liu_kou: {
+      enabled: $("lkEnabled").checked,
+      times: settings.liu_kou.times || [...LK_TIME_OPTIONS],
+      advance_minutes: Number($("lkAdvance").value || 0),
+      message: $("lkMessage").value,
     },
   };
 }
@@ -484,6 +541,12 @@ $("btnLogout").addEventListener("click", async () => {
     await api("/api/auth/logout", { method: "POST", body: "{}" });
   } catch (_) {}
   window.location.href = "/login";
+});
+
+["qtEnabled", "jsEnabled", "zgEnabled", "sfEnabled", "lkEnabled"].forEach((id) => {
+  const el = $(id);
+  if (!el) return;
+  el.addEventListener("change", syncFeaturePanels);
 });
 
 loadAll().catch((err) => {

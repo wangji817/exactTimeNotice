@@ -8,7 +8,7 @@
     "wake_hotkey": "ctrl+alt+w"
   },
   "qiang_taizi": {
-    "enabled": true,
+    "enabled": false,
     "advance_minutes": 5,
     "start_hour": 9,
     "end_hour": 24,
@@ -16,10 +16,10 @@
     "message": "⏰ 抢台子提醒：还有 {advance} 分钟到整点，请准备抢台！"
   },
   "jian_shou": {
-    "enabled": true,
-    "hours": [
-      12,
-      13
+    "enabled": false,
+    "times": [
+      "12:00",
+      "12:30"
     ],
     "cities": [
       "益州",
@@ -28,7 +28,7 @@
     "message": "🛡️ 坚守提醒：请坚守【{cities}】！"
   },
   "zhen_guo": {
-    "enabled": true,
+    "enabled": false,
     "weekdays": [
       1,
       2,
@@ -38,18 +38,15 @@
       6,
       7
     ],
-    "hours": [
-      10,
-      11
-    ],
-    "advance_minutes": 0,
+    "hours": [],
+    "advance_minutes": 1,
     "members": [
       "无缘"
     ],
     "message": "🏯 镇国台子提醒：还有 {advance} 分钟到整点，请相关成员就位！"
   },
   "si_fang": {
-    "enabled": true,
+    "enabled": false,
     "weekdays": [
       1,
       2,
@@ -59,11 +56,20 @@
     ],
     "hour": 13,
     "minute": 0,
+    "advance_minutes": 5,
     "mode": "防守",
     "cities": [
-      "成都",
-      "长沙"
+      "建业"
     ],
-    "message": "⚔️ {mode}四方都城：【{cities}】！"
+    "message": "⚔️ 还有 {advance} 分钟：{mode}四方都城【{cities}】！"
+  },
+  "liu_kou": {
+    "enabled": false,
+    "times": [
+      "10:00",
+      "15:00"
+    ],
+    "advance_minutes": 5,
+    "message": "🏴 流寇攻城提醒：还有 {advance} 分钟，请注意防守城池！"
   }
 }

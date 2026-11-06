@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>三国群雄传平台司令台</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=20261106d" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20261106k" />
 </head>
 <body>
   <div class="app">
@@ -28,6 +28,57 @@
       </div>
     </header>
 
+    <section class="panel switch-bar" id="panelSwitches">
+      <div class="switch-bar-head">
+        <strong>功能开关</strong>
+        <span class="hint">顶部统一管理，改完请点「保存并即时生效」</span>
+      </div>
+      <div class="switch-grid">
+        <label class="switch-item" title="开启后只记日志，不真实发到微信">
+          <span>演练模式</span>
+          <span class="toggle">
+            <input type="checkbox" id="dryRun" />
+            <span></span>
+          </span>
+        </label>
+        <label class="switch-item" data-panel="panelQt">
+          <span>① 抢台子</span>
+          <span class="toggle">
+            <input type="checkbox" id="qtEnabled" />
+            <span></span>
+          </span>
+        </label>
+        <label class="switch-item" data-panel="panelJs">
+          <span>② 坚守城池</span>
+          <span class="toggle">
+            <input type="checkbox" id="jsEnabled" />
+            <span></span>
+          </span>
+        </label>
+        <label class="switch-item" data-panel="panelZg">
+          <span>③ 镇国台子</span>
+          <span class="toggle">
+            <input type="checkbox" id="zgEnabled" />
+            <span></span>
+          </span>
+        </label>
+        <label class="switch-item" data-panel="panelSf">
+          <span>④ 四方都城</span>
+          <span class="toggle">
+            <input type="checkbox" id="sfEnabled" />
+            <span></span>
+          </span>
+        </label>
+        <label class="switch-item" data-panel="panelLk">
+          <span>⑤ 流寇攻城</span>
+          <span class="toggle">
+            <input type="checkbox" id="lkEnabled" />
+            <span></span>
+          </span>
+        </label>
+      </div>
+    </section>
+
     <div class="grid">
       <div class="stack main-stack">
         <!-- 微信连接 -->
@@ -40,16 +91,6 @@
             <label>目标微信群名称</label>
             <input type="text" id="groupName" placeholder="例如：三国群雄传-本盟" />
           </div>
-          <div class="toggle-row">
-            <div>
-              <strong>演练模式（Dry Run）</strong>
-              <div class="hint">开启后只记录日志，不真实发送到微信</div>
-            </div>
-            <label class="toggle">
-              <input type="checkbox" id="dryRun" />
-              <span></span>
-            </label>
-          </div>
           <div class="btn-row">
             <button class="btn btn-ghost" id="btnTestWechat">测试连接</button>
             <button class="btn btn-primary" id="btnPreview">试发一条测试消息</button>
@@ -57,13 +98,10 @@
         </section>
 
         <!-- 抢台子 -->
-        <section class="panel">
+        <section class="panel" id="panelQt">
           <div class="panel-title">
             <h2>① 抢台子</h2>
-            <label class="toggle">
-              <input type="checkbox" id="qtEnabled" />
-              <span></span>
-            </label>
+            <span class="panel-state" data-for="qtEnabled">已关闭</span>
           </div>
           <p class="panel-desc">周一至周日，每日 9 点–24 点，整点前 N 分钟播报。周日 24 点可关闭。</p>
           <div class="row">
@@ -100,13 +138,10 @@
         </section>
 
         <!-- 坚守 -->
-        <section class="panel">
+        <section class="panel" id="panelJs">
           <div class="panel-title">
             <h2>② 坚守城池</h2>
-            <label class="toggle">
-              <input type="checkbox" id="jsEnabled" />
-              <span></span>
-            </label>
+            <span class="panel-state" data-for="jsEnabled">已关闭</span>
           </div>
           <p class="panel-desc">周一至周日，在选定时刻播报坚守城池（默认 12:00、12:30）。</p>
           <div class="field">
@@ -124,13 +159,10 @@
         </section>
 
         <!-- 镇国台子 -->
-        <section class="panel">
+        <section class="panel" id="panelZg">
           <div class="panel-title">
             <h2>③ 镇国台子</h2>
-            <label class="toggle">
-              <input type="checkbox" id="zgEnabled" />
-              <span></span>
-            </label>
+            <span class="panel-state" data-for="zgEnabled">已关闭</span>
           </div>
           <p class="panel-desc">按星期与整点配置，提前播报并 @ 固定成员。成员昵称须与群内显示名一致。</p>
           <div class="field">
@@ -160,15 +192,12 @@
         </section>
 
         <!-- 四方都城 -->
-        <section class="panel">
+        <section class="panel" id="panelSf">
           <div class="panel-title">
             <h2>④ 四方都城</h2>
-            <label class="toggle">
-              <input type="checkbox" id="sfEnabled" />
-              <span></span>
-            </label>
+            <span class="panel-state" data-for="sfEnabled">已关闭</span>
           </div>
-          <p class="panel-desc">默认周一至周五 13:00，播报进攻/防守四方都城。</p>
+          <p class="panel-desc">默认周一至周五 13:00，可提前 N 分钟播报进攻/防守四方都城。</p>
           <div class="field">
             <label>星期（可多选，默认工作日）</label>
             <div class="chips" id="sfWeekdays"></div>
@@ -182,6 +211,10 @@
               <label>分钟</label>
               <input type="number" id="sfMinute" min="0" max="59" />
             </div>
+            <div class="field">
+              <label>提前分钟数</label>
+              <input type="number" id="sfAdvance" min="0" max="59" />
+            </div>
           </div>
           <div class="field">
             <label>模式</label>
@@ -192,8 +225,29 @@
             <div class="chips" id="sfCities"></div>
           </div>
           <div class="field">
-            <label>播报文案（可用 {mode} {cities}）</label>
+            <label>播报文案（可用 {advance} {mode} {cities} {hour} {minute}）</label>
             <textarea id="sfMessage"></textarea>
+          </div>
+        </section>
+
+        <!-- 流寇攻城 -->
+        <section class="panel" id="panelLk">
+          <div class="panel-title">
+            <h2>⑤ 流寇攻城</h2>
+            <span class="panel-state" data-for="lkEnabled">已关闭</span>
+          </div>
+          <p class="panel-desc">周一至周日，默认 10:00 / 15:00，可提前 N 分钟播报流寇攻城。</p>
+          <div class="field">
+            <label>播报时刻（可多选）</label>
+            <div class="chips" id="lkTimes"></div>
+          </div>
+          <div class="field">
+            <label>提前分钟数</label>
+            <input type="number" id="lkAdvance" min="0" max="59" />
+          </div>
+          <div class="field">
+            <label>播报文案（可用 {advance} {time} {hour} {minute}）</label>
+            <textarea id="lkMessage"></textarea>
           </div>
         </section>
       </div>
@@ -223,6 +277,6 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="/static/js/app.js?v=20261106c"></script>
+  <script src="/static/js/app.js?v=20261106k"></script>
 </body>
 </html>
