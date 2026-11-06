@@ -13,7 +13,7 @@
     "start_hour": 9,
     "end_hour": 24,
     "skip_sunday_24": true,
-    "message": "⏰ 抢台子提醒：还有 {advance} 分钟到整点，请准备抢台！"
+    "message": "⏰ 抢台子提醒：还有 {advance} 分钟到整点，请准备抢台！请主公及时上线，莫误战机！"
   },
   "jian_shou": {
     "enabled": true,
@@ -25,7 +25,7 @@
       "益州",
       "扬州"
     ],
-    "message": "🛡️ 坚守提醒：请坚守【{cities}】！"
+    "message": "🛡️ 坚守提醒：请坚守【{cities}】！请主公及时上线，守住城池！"
   },
   "zhen_guo": {
     "enabled": true,
@@ -52,7 +52,7 @@
       "好无聊啊",
       "神丶初晗(鹿玖)"
     ],
-    "message": "🏯 镇国台子提醒：还有 {advance} 分钟到整点，请相关成员就位！"
+    "message": "🏯 镇国台子提醒：还有 {advance} 分钟到整点，请相关成员就位！请主公及时上线，共守镇国！"
   },
   "si_fang": {
     "enabled": true,
@@ -70,7 +70,7 @@
     "cities": [
       "建业"
     ],
-    "message": "⚔️ 还有 {advance} 分钟：{mode}四方都城【{cities}】！"
+    "message": "⚔️ 还有 {advance} 分钟：{mode}四方都城【{cities}】！请主公及时上线，整军待战！"
   },
   "liu_kou": {
     "enabled": true,
@@ -79,6 +79,6 @@
       "15:00"
     ],
     "advance_minutes": 5,
-    "message": "🏴 流寇攻城提醒：还有 {advance} 分钟，请注意防守城池！"
+    "message": "🏴 流寇攻城提醒：还有 {advance} 分钟，请注意防守城池！请主公及时上线，合力御敌！"
   }
 }

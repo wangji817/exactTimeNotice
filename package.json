@@ -1,0 +1,7 @@
+{
+  "name": "exact-time-notice",
+  "private": true,
+  "scripts": {
+    "start": "start.bat"
+  }
+}

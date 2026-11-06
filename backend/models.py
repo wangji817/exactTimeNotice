@@ -22,7 +22,7 @@ class QiangTaiziConfig(BaseModel):
     start_hour: int = Field(default=9, ge=0, le=24)
     end_hour: int = Field(default=24, ge=0, le=24)
     skip_sunday_24: bool = True
-    message: str = "⏰ 抢台子提醒：还有 {advance} 分钟到整点，请准备抢台！"
+    message: str = "⏰ 抢台子提醒：还有 {advance} 分钟到整点，请准备抢台！请主公及时上线，莫误战机！"
 
 
 class JianShouConfig(BaseModel):
@@ -30,7 +30,7 @@ class JianShouConfig(BaseModel):
     # 播报时刻，格式 HH:MM；默认 12:00、12:30
     times: list[str] = Field(default_factory=lambda: ["12:00", "12:30"])
     cities: list[str] = Field(default_factory=lambda: ["益州", "扬州", "兖州"])
-    message: str = "🛡️ 坚守提醒：请坚守【{cities}】！"
+    message: str = "🛡️ 坚守提醒：请坚守【{cities}】！请主公及时上线，守住城池！"
 
     @model_validator(mode="before")
     @classmethod
@@ -51,7 +51,7 @@ class ZhenGuoConfig(BaseModel):
     hours: list[int] = Field(default_factory=lambda: [20])
     advance_minutes: int = Field(default=5, ge=0, le=59)
     members: list[str] = Field(default_factory=list)
-    message: str = "🏯 镇国台子提醒：还有 {advance} 分钟到整点，请相关成员就位！"
+    message: str = "🏯 镇国台子提醒：还有 {advance} 分钟到整点，请相关成员就位！请主公及时上线，共守镇国！"
 
 
 class SiFangConfig(BaseModel):
@@ -64,7 +64,7 @@ class SiFangConfig(BaseModel):
     cities: list[str] = Field(
         default_factory=lambda: ["许昌", "成都", "长沙", "建业"]
     )
-    message: str = "⚔️ 还有 {advance} 分钟：{mode}四方都城【{cities}】！"
+    message: str = "⚔️ 还有 {advance} 分钟：{mode}四方都城【{cities}】！请主公及时上线，整军待战！"
 
 
 class LiuKouConfig(BaseModel):
@@ -72,7 +72,7 @@ class LiuKouConfig(BaseModel):
     # 播报时刻，格式 HH:MM；默认上午 10:00、下午 15:00
     times: list[str] = Field(default_factory=lambda: ["10:00", "15:00"])
     advance_minutes: int = Field(default=5, ge=0, le=59)
-    message: str = "🏴 流寇攻城提醒：还有 {advance} 分钟，请注意防守城池！"
+    message: str = "🏴 流寇攻城提醒：还有 {advance} 分钟，请注意防守城池！请主公及时上线，合力御敌！"
 
 
 class AppSettings(BaseModel):
