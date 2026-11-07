@@ -2,6 +2,7 @@
   "name": "exact-time-notice",
   "private": true,
   "scripts": {
+    "install:app": "install.bat",
     "start": "start.bat"
   }
 }

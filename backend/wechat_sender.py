@@ -3,6 +3,8 @@ from __future__ import annotations
 import subprocess
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from datetime import datetime
 from typing import Callable
 
@@ -22,6 +24,8 @@ FEATURE_ORDER = [
 
 # 同一时刻多任务先入队，短时窗口内合并为一条再发
 COALESCE_SECONDS = 2.5
+# 微信 UI 自动化最长等待；超时必须释放，避免 preview 一直 pending
+SEND_TIMEOUT_SECONDS = 25
 
 
 def _compose_batch(items: list[dict]) -> tuple[str, str, list[str]]:
@@ -72,19 +76,22 @@ class WechatSender:
     """通过本机官方 PC 微信发群（兼容新版 Qt 微信，主要靠快捷键+坐标点击）。"""
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        # 日志锁与发送锁分离：发送卡住时不能拖死 /api/logs
+        self._log_lock = threading.Lock()
+        self._send_lock = threading.Lock()
         self._logs: list[BroadcastLog] = []
         self._max_logs = 200
         self._listeners: list[Callable[[BroadcastLog], None]] = []
         self._batch_lock = threading.Lock()
         self._pending: list[dict] = []
         self._flush_timer: threading.Timer | None = None
+        self._send_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="wx-send")
 
     def on_log(self, callback: Callable[[BroadcastLog], None]) -> None:
         self._listeners.append(callback)
 
     def get_logs(self, limit: int = 50) -> list[BroadcastLog]:
-        with self._lock:
+        with self._log_lock:
             return list(reversed(self._logs[-limit:]))
 
     def send(
@@ -160,8 +167,7 @@ class WechatSender:
             print(f"[DRY-RUN][{feature}] -> {group_name}:\n{full_message}")
         else:
             try:
-                with self._lock:
-                    self._send_uia(group_name, body, at_members)
+                self._send_with_timeout(group_name, body, at_members)
                 detail = f"已发送至群「{group_name}」"
                 success = True
                 print(f"[SEND][{feature}] -> {group_name}:\n{full_message}")
@@ -177,7 +183,7 @@ class WechatSender:
             success=success,
             detail=detail,
         )
-        with self._lock:
+        with self._log_lock:
             self._logs.append(log)
             if len(self._logs) > self._max_logs:
                 self._logs = self._logs[-self._max_logs :]
@@ -188,57 +194,93 @@ class WechatSender:
                 pass
         return log
 
+    def _send_with_timeout(
+        self, group_name: str, message: str, at_members: list[str]
+    ) -> None:
+        """在独立线程发送，超时则返回错误，避免 HTTP 一直 pending。"""
+        if not self._send_lock.acquire(timeout=3):
+            raise RuntimeError("上一条微信发送仍在进行，请稍后再试")
+
+        def _run() -> None:
+            try:
+                self._send_uia(group_name, message, at_members)
+            finally:
+                self._send_lock.release()
+
+        future = self._send_pool.submit(_run)
+        try:
+            future.result(timeout=SEND_TIMEOUT_SECONDS)
+        except FuturesTimeoutError as exc:
+            raise RuntimeError(
+                f"发送超时（>{SEND_TIMEOUT_SECONDS}s）。"
+                "请确认 PC 微信已打开、群名完全一致，并勿让浏览器/开发者工具抢占焦点后重试"
+            ) from exc
+
     def _send_uia(
         self, group_name: str, message: str, at_members: list[str]
     ) -> None:
-        import pyperclip
         import uiautomation as auto
 
+        print(f"[Wechat] 开始发送 -> 群「{group_name}」")
         wx = _ensure_wechat_window(auto)
-        hwnd = int(wx.NativeWindowHandle or 0)
+        print("[Wechat] 已定位窗口，准备置前")
+        try:
+            hwnd = int(getattr(wx, "NativeWindowHandle", 0) or 0)
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(f"读取微信窗口句柄失败：{exc}") from exc
+        if not hwnd:
+            info = _inspect_wechat_ui()
+            hwnd = int(info.get("hwnd") or 0)
+        if not hwnd:
+            raise RuntimeError("无法获取微信主窗口句柄，请先手动打开微信主界面")
+
         # 发送全程置顶，避免浏览器抢回焦点后把微信盖住、按键打到网页上
         _set_topmost(hwnd, True)
         send_ok = False
         try:
+            print("[Wechat] 置前窗口")
             _restore_and_foreground(hwnd)
             time.sleep(0.3)
 
             # 搜索并打开目标群（Qt 新版几乎无障碍树，不依赖 EditControl）
+            print("[Wechat] 搜索群名")
             auto.SendKeys("{Ctrl}f", waitTime=0.3)
             time.sleep(0.3)
             auto.SendKeys("{Ctrl}a", waitTime=0.05)
             auto.SendKeys("{Delete}", waitTime=0.05)
-            pyperclip.copy(group_name)
+            _clipboard_copy(group_name)
             auto.SendKeys("{Ctrl}v", waitTime=0.25)
             time.sleep(0.7)
             auto.SendKeys("{Enter}", waitTime=0.5)
             time.sleep(0.55)
 
             # 搜群后浏览器常会抢焦点：再次置前，并点聊天区/输入区
+            print("[Wechat] 聚焦输入框并粘贴消息")
             _restore_and_foreground(hwnd)
-            _click_chat_area(wx, auto)
+            _click_chat_area(wx, auto, hwnd)
             time.sleep(0.2)
-            _focus_chat_input(wx, auto)
+            _focus_chat_input(wx, auto, hwnd)
             time.sleep(0.2)
 
             if not _is_foreground(hwnd):
                 _restore_and_foreground(hwnd)
-                _focus_chat_input(wx, auto)
+                _focus_chat_input(wx, auto, hwnd)
                 time.sleep(0.2)
 
             for member in at_members:
                 auto.SendKeys("@", waitTime=0.15)
-                pyperclip.copy(member)
+                _clipboard_copy(member)
                 auto.SendKeys("{Ctrl}v", waitTime=0.2)
                 time.sleep(0.45)
                 auto.SendKeys("{Enter}", waitTime=0.25)
 
-            pyperclip.copy(message)
+            _clipboard_copy(message)
             auto.SendKeys("{Ctrl}v", waitTime=0.3)
             time.sleep(0.25)
             auto.SendKeys("{Enter}", waitTime=0.3)
             time.sleep(0.35)
             send_ok = True
+            print(f"[Wechat] 发送步骤完成 -> 群「{group_name}」")
         finally:
             _set_topmost(hwnd, False)
             # 发送成功后用微信「显示/隐藏」快捷键收起窗口
@@ -434,27 +476,45 @@ def _toggle_wechat_window() -> None:
         print(f"[Wechat] 快捷键唤起/隐藏失败：{exc}")
 
 
+def _control_from_hwnd(auto, hwnd: int):
+    """用句柄包装窗口，避免 uiautomation 全局搜索卡死。"""
+    if not hwnd:
+        return None
+    try:
+        import win32gui
+
+        if not win32gui.IsWindow(hwnd):
+            return None
+    except Exception:  # noqa: BLE001
+        return None
+    try:
+        ctrl = auto.ControlFromHandle(hwnd)
+        if ctrl is not None:
+            return ctrl
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        # 部分版本接口名不同
+        return auto.GetControlFromHandle(hwnd)
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _ensure_wechat_window(auto):
     """找到已登录的微信主窗口；若仅有进程无窗口，则用快捷键唤起。"""
+    print("[Wechat] 探测窗口…")
     info = _inspect_wechat_ui()
+    print(
+        "[Wechat] 探测结果："
+        f"logged_in={info.get('logged_in')} visible={info.get('visible')} "
+        f"hidden={info.get('hidden')} hwnd={info.get('hwnd')} "
+        f"title={info.get('title')!r} class={info.get('class')!r}"
+    )
     if info.get("login_page") or (info.get("visible") and not info.get("logged_in")):
         raise RuntimeError("微信未登录，仍在登录页，请先扫码/登录成功后再发送")
 
-    wx = _find_wechat_window(auto)
+    wx = _find_wechat_window(auto, preferred_hwnd=int(info.get("hwnd") or 0))
     if wx is not None:
-        # 再次确认不是登录小窗
-        try:
-            cls = getattr(wx, "ClassName", "") or ""
-            name = getattr(wx, "Name", "") or ""
-            rect = wx.BoundingRectangle
-            width = max(int(rect.right - rect.left), 0)
-            height = max(int(rect.bottom - rect.top), 0)
-            if not _window_looks_logged_in(cls, name, width, height):
-                raise RuntimeError("微信未登录，仍在登录页，请先扫码/登录成功后再发送")
-        except RuntimeError:
-            raise
-        except Exception:  # noqa: BLE001
-            pass
         return wx
 
     if not _wechat_process_running():
@@ -467,7 +527,7 @@ def _ensure_wechat_window(auto):
     info = _inspect_wechat_ui()
     if info.get("login_page") or (info.get("visible") and not info.get("logged_in")):
         raise RuntimeError("微信未登录，仍在登录页，请先扫码/登录成功后再发送")
-    wx = _find_wechat_window(auto)
+    wx = _find_wechat_window(auto, preferred_hwnd=int(info.get("hwnd") or 0))
     if wx is not None:
         return wx
 
@@ -477,13 +537,14 @@ def _ensure_wechat_window(auto):
     info = _inspect_wechat_ui()
     if info.get("login_page") or (info.get("visible") and not info.get("logged_in")):
         raise RuntimeError("微信未登录，仍在登录页，请先扫码/登录成功后再发送")
-    wx = _find_wechat_window(auto)
+    wx = _find_wechat_window(auto, preferred_hwnd=int(info.get("hwnd") or 0))
     if wx is not None:
         return wx
 
     raise RuntimeError(
         f"微信进程在运行，但无法用快捷键「{hotkey}」唤起窗口。"
-        "请到微信「设置 → 快捷键」确认「显示/隐藏窗口」，或手动打开主窗口后重试"
+        "请先手动打开微信主窗口（不要只留在托盘/图片预览），"
+        "并到微信「设置 → 快捷键」确认「显示/隐藏窗口」后重试"
     )
 
 
@@ -595,6 +656,7 @@ def _inspect_wechat_ui() -> dict:
             "title": "",
             "width": 0,
             "height": 0,
+            "hwnd": 0,
         }
 
     cls = pick.get("class") or ""
@@ -609,6 +671,7 @@ def _inspect_wechat_ui() -> dict:
         "title": pick.get("title") or "",
         "width": pick.get("width") or 0,
         "height": pick.get("height") or 0,
+        "hwnd": int(pick.get("hwnd") or 0),
     }
 
 
@@ -644,58 +707,72 @@ def _window_looks_logged_in(cls: str, title: str, width: int, height: int) -> bo
     return False
 
 
-def _find_wechat_window(auto):
-    """查找本机微信主窗口（优先已登录主界面；兼容经典版与 Qt 新版）。"""
-    # 缩短超时，避免探测卡住
+def _find_wechat_window(auto, preferred_hwnd: int = 0):
+    """查找本机微信主窗口。优先 Win32 句柄，避免 UIA 全局搜索卡死。"""
     try:
-        auto.SetGlobalSearchTimeout(1.0)
+        auto.SetGlobalSearchTimeout(0.5)
     except Exception:  # noqa: BLE001
         pass
 
+    if preferred_hwnd:
+        wx = _control_from_hwnd(auto, preferred_hwnd)
+        if wx is not None:
+            print(f"[Wechat] 使用 Win32 句柄包装窗口 hwnd={preferred_hwnd}")
+            return wx
+
+    # 再扫一遍取主窗句柄
+    info = _inspect_wechat_ui()
+    hwnd = int(info.get("hwnd") or 0)
+    if hwnd and hwnd != preferred_hwnd:
+        wx = _control_from_hwnd(auto, hwnd)
+        if wx is not None:
+            print(f"[Wechat] 使用探测句柄包装窗口 hwnd={hwnd}")
+            return wx
+
+    # 最后才走名称搜索（可能慢，但有短超时）
     candidates = [
-        auto.WindowControl(searchDepth=1, ClassName="WeChatMainWndForPC"),
-        auto.WindowControl(searchDepth=1, ClassName="Qt51514QWindowIcon", Name="微信"),
-        auto.WindowControl(searchDepth=1, ClassName="Chrome_WidgetWin_0", Name="微信"),
-        auto.WindowControl(searchDepth=1, Name="微信"),
-        auto.WindowControl(searchDepth=1, Name="Weixin"),
+        ("WeChatMainWndForPC", None),
+        ("Qt51514QWindowIcon", "微信"),
+        ("Chrome_WidgetWin_0", "微信"),
+        (None, "微信"),
+        (None, "Weixin"),
     ]
-    for win in candidates:
+    for cls_name, win_name in candidates:
         try:
-            if win.Exists(0, 0):
-                cls = getattr(win, "ClassName", "") or ""
-                name = getattr(win, "Name", "") or ""
-                rect = win.BoundingRectangle
-                width = max(int(rect.right - rect.left), 0)
-                height = max(int(rect.bottom - rect.top), 0)
-                # 发送时也尽量避开登录页小窗
-                if _window_looks_logged_in(cls, name, width, height):
-                    return win
-                # 若只有登录窗，先返回给上层做状态判断
-                if "login" in cls.lower() or "登录" in name or width < 520:
-                    return win
+            kwargs = {"searchDepth": 1}
+            if cls_name:
+                kwargs["ClassName"] = cls_name
+            if win_name:
+                kwargs["Name"] = win_name
+            win = auto.WindowControl(**kwargs)
+            if win.Exists(0.2, 0):
+                print(f"[Wechat] UIA 命中窗口 class={cls_name} name={win_name}")
                 return win
         except Exception:  # noqa: BLE001
             continue
-
-    # 兜底：遍历顶层窗口，匹配名称含微信且可见
-    try:
-        root = auto.GetRootControl()
-        for child in root.GetChildren():
-            try:
-                name = child.Name or ""
-                if name in {"微信", "Weixin", "WeChat"} and child.Exists(0, 0):
-                    return child
-            except Exception:  # noqa: BLE001
-                continue
-    except Exception:  # noqa: BLE001
-        pass
     return None
 
 
-def _click_chat_area(wx, auto) -> None:
-    """点击右侧聊天消息区，确保会话已激活（不要用 Esc，容易丢焦点）。"""
+def _window_rect(wx, hwnd: int = 0) -> tuple[int, int, int, int]:
+    """优先 Win32 取矩形，避免 UIA BoundingRectangle 卡住。"""
+    import win32gui
+
+    handle = hwnd
+    if not handle:
+        try:
+            handle = int(getattr(wx, "NativeWindowHandle", 0) or 0)
+        except Exception:  # noqa: BLE001
+            handle = 0
+    if handle and win32gui.IsWindow(handle):
+        left, top, right, bottom = win32gui.GetWindowRect(handle)
+        return left, top, right, bottom
     rect = wx.BoundingRectangle
-    left, top, right, bottom = rect.left, rect.top, rect.right, rect.bottom
+    return rect.left, rect.top, rect.right, rect.bottom
+
+
+def _click_chat_area(wx, auto, hwnd: int = 0) -> None:
+    """点击右侧聊天消息区，确保会话已激活（不要用 Esc，容易丢焦点）。"""
+    left, top, right, bottom = _window_rect(wx, hwnd)
     width = max(right - left, 1)
     height = max(bottom - top, 1)
     x = left + int(width * 0.68)
@@ -703,18 +780,9 @@ def _click_chat_area(wx, auto) -> None:
     auto.Click(x, y, waitTime=0.2)
 
 
-def _focus_chat_input(wx, auto) -> None:
-    """聚焦聊天输入区：优先找可访问控件，失败则点窗口底部（Qt 新版常用）。"""
-    edit = _find_edit_box(wx)
-    if edit is not None:
-        try:
-            edit.Click(simulateMove=False)
-            return
-        except Exception:  # noqa: BLE001
-            pass
-
-    rect = wx.BoundingRectangle
-    left, top, right, bottom = rect.left, rect.top, rect.right, rect.bottom
+def _focus_chat_input(wx, auto, hwnd: int = 0) -> None:
+    """聚焦聊天输入区：Qt 新版直接点底部，避免深层 UIA 搜索卡死。"""
+    left, top, right, bottom = _window_rect(wx, hwnd)
     width = max(right - left, 1)
     height = max(bottom - top, 1)
     # 输入框通常在聊天区底部偏右（避开左侧会话列表）
@@ -768,14 +836,23 @@ def _find_edit_box(wx):
     return None
 
 
+def _clipboard_copy(text: str) -> None:
+    """写入剪贴板；失败则抛错。避免依赖可能卡住的外部状态。"""
+    import pyperclip
+
+    pyperclip.copy(text or "")
+
+
 def _restore_and_foreground(hwnd: int) -> None:
-    """尽量把微信窗口置前。Windows 常拦截 SetForegroundWindow，失败时不抛错继续发。"""
+    """尽量把微信窗口置前。
+
+    不用 AttachThreadInput：与 Chrome/DevTools 同机时容易死锁，
+    表现为 /api/broadcast/preview 一直 pending。
+    """
     import ctypes
 
-    import win32api
     import win32con
     import win32gui
-    import win32process
 
     if not hwnd or not win32gui.IsWindow(hwnd):
         raise RuntimeError("微信窗口句柄无效，请确认 PC 微信已打开")
@@ -789,45 +866,25 @@ def _restore_and_foreground(hwnd: int) -> None:
         return
 
     user32 = ctypes.windll.user32
+    # Alt 键技巧：降低 SetForegroundWindow 被系统拦截的概率
     user32.keybd_event(0x12, 0, 0, 0)  # VK_MENU down
     user32.keybd_event(0x12, 0, 2, 0)  # VK_MENU up
 
-    current_tid = win32api.GetCurrentThreadId()
-    target_tid, _ = win32process.GetWindowThreadProcessId(hwnd)
-    fg = win32gui.GetForegroundWindow()
-    fg_tid = 0
-    if fg:
-        fg_tid, _ = win32process.GetWindowThreadProcessId(fg)
-
-    attached_fg = False
-    attached_target = False
     try:
-        if fg_tid and fg_tid != current_tid:
-            attached_fg = bool(
-                win32process.AttachThreadInput(current_tid, fg_tid, True)
-            )
-        if target_tid and target_tid != current_tid and target_tid != fg_tid:
-            attached_target = bool(
-                win32process.AttachThreadInput(current_tid, target_tid, True)
-            )
-
         win32gui.BringWindowToTop(hwnd)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        win32gui.SetForegroundWindow(hwnd)
+    except Exception:  # noqa: BLE001
         try:
-            win32gui.SetForegroundWindow(hwnd)
-        except Exception:  # noqa: BLE001
-            try:
-                user32.SetForegroundWindow(hwnd)
-            except Exception:  # noqa: BLE001
-                pass
-        try:
-            win32gui.SetActiveWindow(hwnd)
+            user32.SetForegroundWindow(hwnd)
         except Exception:  # noqa: BLE001
             pass
-    finally:
-        if attached_target:
-            win32process.AttachThreadInput(current_tid, target_tid, False)
-        if attached_fg:
-            win32process.AttachThreadInput(current_tid, fg_tid, False)
+    try:
+        win32gui.SetActiveWindow(hwnd)
+    except Exception:  # noqa: BLE001
+        pass
 
     time.sleep(0.25)
 

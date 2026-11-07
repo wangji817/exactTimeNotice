@@ -492,6 +492,11 @@ $("btnTestWechat").addEventListener("click", async () => {
 });
 
 $("btnPreview").addEventListener("click", async () => {
+  const btn = $("btnPreview");
+  if (btn.disabled) return;
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "发送中…";
   try {
     await api("/api/settings", {
       method: "PATCH",
@@ -502,6 +507,7 @@ $("btnPreview").addEventListener("click", async () => {
         },
       }),
     });
+    toast("正在操控 PC 微信发送…");
     const log = await api("/api/broadcast/preview", {
       method: "POST",
       body: JSON.stringify({
@@ -514,6 +520,9 @@ $("btnPreview").addEventListener("click", async () => {
     toast(log.success ? "试发完成" : log.detail || "试发失败", !!log.success);
   } catch (err) {
     toast(err.message || String(err), false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
   }
 });
 
