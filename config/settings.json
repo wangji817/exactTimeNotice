@@ -4,6 +4,7 @@
   },
   "wechat": {
     "group_name": "中年男人的浪漫",
+    "test_group_name": "三国测试组",
     "dry_run": false,
     "wake_hotkey": "ctrl+alt+w"
   },
@@ -13,7 +14,7 @@
     "start_hour": 9,
     "end_hour": 24,
     "skip_sunday_24": true,
-    "message": "⏰ 抢台子提醒：还有 {advance} 分钟到整点，请准备抢台！请主公及时上线，莫误战机！"
+    "message": "⏰ 抢台子 · 还有 {advance} 分钟"
   },
   "jian_shou": {
     "enabled": true,
@@ -25,7 +26,7 @@
       "益州",
       "扬州"
     ],
-    "message": "🛡️ 坚守提醒：请坚守【{cities}】！请主公及时上线，守住城池！"
+    "message": "🛡️ 坚守 · {cities}"
   },
   "zhen_guo": {
     "enabled": true,
@@ -39,11 +40,11 @@
       7
     ],
     "hours": [
-      15,
-      16,
-      17,
-      18,
-      19
+      9,
+      10,
+      11,
+      12,
+      13
     ],
     "advance_minutes": 5,
     "members": [
@@ -52,7 +53,7 @@
       "好无聊啊",
       "神丶初晗(鹿玖)"
     ],
-    "message": "🏯 镇国台子提醒：还有 {advance} 分钟到整点，请相关成员就位！请主公及时上线，共守镇国！"
+    "message": "🏯 镇国 · 还有 {advance} 分钟，请就位"
   },
   "si_fang": {
     "enabled": true,
@@ -61,7 +62,9 @@
       2,
       3,
       4,
-      5
+      5,
+      6,
+      7
     ],
     "hour": 13,
     "minute": 0,
@@ -70,7 +73,11 @@
     "cities": [
       "建业"
     ],
-    "message": "⚔️ 还有 {advance} 分钟：{mode}四方都城【{cities}】！请主公及时上线，整军待战！"
+    "weekend_mode": "防守",
+    "weekend_cities": [
+      "洛阳"
+    ],
+    "message": "⚔️ 四方·{mode} · {cities} · 还有 {advance} 分钟"
   },
   "liu_kou": {
     "enabled": true,
@@ -79,6 +86,6 @@
       "15:00"
     ],
     "advance_minutes": 5,
-    "message": "🏴 流寇攻城提醒：还有 {advance} 分钟，请注意防守城池！请主公及时上线，合力御敌！"
+    "message": "🏴 流寇 · 还有 {advance} 分钟"
   }
 }
