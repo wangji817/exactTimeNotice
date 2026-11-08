@@ -11,52 +11,75 @@ class AuthConfig(BaseModel):
 
 class WechatConfig(BaseModel):
     group_name: str = ""
+    test_group_name: str = "三国测试组"
     dry_run: bool = True
-    # 与微信「设置 → 快捷键 → 显示/隐藏窗口」保持一致，默认 Ctrl+Alt+W
     wake_hotkey: str = "ctrl+alt+w"
 
 
-class QiangTaiziConfig(BaseModel):
+class BroadcastWindowConfig(BaseModel):
+    enabled: bool = True
+    start_hour: int = Field(default=9, ge=0, le=23)
+    end_hour: int = Field(default=23, ge=0, le=23)
+
+
+class SeasonConfig(BaseModel):
+    """赛季时间轴：赛季类播报仅在 [starts_at, ends_at) 内执行。"""
+
+    name: str = "S2"
+    season_days: int = Field(default=45, ge=1, le=365)
+    phase_days: int = Field(default=15, ge=1, le=365)
+    starts_at: str = ""
+    ends_at: str = ""
+
+
+class MentionFields(BaseModel):
+    """所有播报通用：可选 @所有人 / @部分成员。"""
+
+    at_everyone: bool = False
+    members: list[str] = Field(default_factory=list)
+
+
+class QiangTaiziConfig(MentionFields):
     enabled: bool = False
     advance_minutes: int = Field(default=5, ge=0, le=59)
     start_hour: int = Field(default=9, ge=0, le=24)
-    end_hour: int = Field(default=24, ge=0, le=24)
+    monday_start_hour: int = Field(default=10, ge=0, le=24)
+    end_hour: int = Field(default=23, ge=0, le=24)
     skip_sunday_24: bool = True
-    message: str = "⏰ 抢台子提醒：还有 {advance} 分钟到整点，请准备抢台！请主公及时上线，莫误战机！"
+    message: str = "⏰ 抢台子提醒\n还有 {advance} 分钟到整点，请主公准备上线～"
 
 
-class JianShouConfig(BaseModel):
+class JianShouConfig(MentionFields):
     enabled: bool = False
-    # 播报时刻，格式 HH:MM；默认 12:00、12:30
+    advance_minutes: int = Field(default=5, ge=0, le=59)
     times: list[str] = Field(default_factory=lambda: ["12:00", "12:30"])
     cities: list[str] = Field(default_factory=lambda: ["益州", "扬州", "兖州"])
-    message: str = "🛡️ 坚守提醒：请坚守【{cities}】！请主公及时上线，守住城池！"
+    message: str = "🛡️ 坚守城池\n还有 {advance} 分钟，本时段请守好：{cities}"
 
     @model_validator(mode="before")
     @classmethod
     def _migrate_hours(cls, data: Any) -> Any:
         if not isinstance(data, dict):
             return data
-        times = data.get("times")
-        if not times:
-            # 旧版 hours=[12,13] 统一迁到新默认 12:00 / 12:30
+        if not data.get("times"):
             data["times"] = ["12:00", "12:30"]
         data.pop("hours", None)
         return data
 
 
-class ZhenGuoConfig(BaseModel):
+class ZhenGuoConfig(MentionFields):
     enabled: bool = False
-    weekdays: list[int] = Field(default_factory=lambda: [1, 2, 3, 4, 5])
-    hours: list[int] = Field(default_factory=lambda: [20])
+    weekdays: list[int] = Field(default_factory=lambda: [1, 2, 3, 4, 5, 6, 7])
+    hours: list[int] = Field(default_factory=lambda: [9, 10, 11, 12, 13])
+    start_hour: int = Field(default=9, ge=0, le=23)
+    monday_start_hour: int = Field(default=10, ge=0, le=23)
     advance_minutes: int = Field(default=5, ge=0, le=59)
-    members: list[str] = Field(default_factory=list)
-    message: str = "🏯 镇国台子提醒：还有 {advance} 分钟到整点，请相关成员就位！请主公及时上线，共守镇国！"
+    message: str = "🏯 镇国台子\n还有 {advance} 分钟，相关主公请就位～"
 
 
-class SiFangConfig(BaseModel):
+class SiFangConfig(MentionFields):
     enabled: bool = False
-    weekdays: list[int] = Field(default_factory=lambda: [1, 2, 3, 4, 5])
+    weekdays: list[int] = Field(default_factory=lambda: [1, 2, 3, 4, 5, 6, 7])
     hour: int = Field(default=13, ge=0, le=23)
     minute: int = Field(default=0, ge=0, le=59)
     advance_minutes: int = Field(default=5, ge=0, le=59)
@@ -64,25 +87,116 @@ class SiFangConfig(BaseModel):
     cities: list[str] = Field(
         default_factory=lambda: ["许昌", "成都", "长沙", "建业"]
     )
-    message: str = "⚔️ 还有 {advance} 分钟：{mode}四方都城【{cities}】！请主公及时上线，整军待战！"
+    weekend_mode: Literal["进攻", "防守"] = "防守"
+    weekend_cities: list[str] = Field(default_factory=lambda: ["洛阳"])
+    message: str = "⚔️ 四方都城 · {mode}\n目标 {cities}，还有 {advance} 分钟"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_weekend(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        if "weekend_cities" not in data and data.get("weekend_city"):
+            city = str(data.get("weekend_city") or "").strip()
+            data["weekend_cities"] = [city] if city else ["洛阳"]
+        data.pop("weekend_city", None)
+        if "weekend_mode" not in data:
+            data["weekend_mode"] = "防守"
+        return data
 
 
-class LiuKouConfig(BaseModel):
+class LiuKouConfig(MentionFields):
     enabled: bool = False
-    # 播报时刻，格式 HH:MM；默认上午 10:00、下午 15:00
     times: list[str] = Field(default_factory=lambda: ["10:00", "15:00"])
     advance_minutes: int = Field(default=5, ge=0, le=59)
-    message: str = "🏴 流寇攻城提醒：还有 {advance} 分钟，请注意防守城池！请主公及时上线，合力御敌！"
+    message: str = "🏴 流寇攻城\n还有 {advance} 分钟，请注意守城～"
+
+
+class DiaoYuConfig(MentionFields):
+    """普通类：钓鱼（每日固定时刻循环）。"""
+
+    enabled: bool = True
+    times: list[str] = Field(default_factory=lambda: ["18:00"])
+    advance_minutes: int = Field(default=5, ge=0, le=59)
+    message: str = "🎣 钓鱼提醒\n还有 {advance} 分钟（{time}），别忘了上线钓鱼～"
+
+
+class TimedEventConfig(MentionFields):
+    """活动类：周期时刻 + 活动起止期；期外不播，结束后无自动下一轮。"""
+
+    enabled: bool = False
+    weekdays: list[int] = Field(default_factory=list)
+    hour: int = Field(default=20, ge=0, le=23)
+    minute: int = Field(default=0, ge=0, le=59)
+    end_hour: int = Field(default=20, ge=0, le=23)
+    end_minute: int = Field(default=30, ge=0, le=59)
+    advance_minutes: int = Field(default=5, ge=0, le=59)
+    starts_at: str = ""
+    ends_at: str = ""
+    message: str = ""
 
 
 class AppSettings(BaseModel):
     auth: AuthConfig = Field(default_factory=AuthConfig)
     wechat: WechatConfig = Field(default_factory=WechatConfig)
+    broadcast_window: BroadcastWindowConfig = Field(
+        default_factory=BroadcastWindowConfig
+    )
+    season: SeasonConfig = Field(default_factory=SeasonConfig)
     qiang_taizi: QiangTaiziConfig = Field(default_factory=QiangTaiziConfig)
     jian_shou: JianShouConfig = Field(default_factory=JianShouConfig)
     zhen_guo: ZhenGuoConfig = Field(default_factory=ZhenGuoConfig)
     si_fang: SiFangConfig = Field(default_factory=SiFangConfig)
     liu_kou: LiuKouConfig = Field(default_factory=LiuKouConfig)
+    diao_yu: DiaoYuConfig = Field(default_factory=DiaoYuConfig)
+    qun_ying_hui: TimedEventConfig = Field(
+        default_factory=lambda: TimedEventConfig(
+            enabled=True,
+            weekdays=[7],
+            hour=20,
+            minute=0,
+            end_hour=20,
+            end_minute=30,
+            advance_minutes=5,
+            message=(
+                "🏆 群英会\n"
+                "还有 {advance} 分钟开赛（{start}–{end}）\n"
+                "请主公准时到场～"
+            ),
+        )
+    )
+    wang_cheng: TimedEventConfig = Field(
+        default_factory=lambda: TimedEventConfig(
+            enabled=True,
+            weekdays=[2, 4],
+            hour=21,
+            minute=0,
+            end_hour=21,
+            end_minute=30,
+            advance_minutes=5,
+            message=(
+                "🏰 王城争锋\n"
+                "还有 {advance} 分钟开赛（{start}–{end}）\n"
+                "请队伍成员准时上线～"
+            ),
+        )
+    )
+    tian_zi_zhan: TimedEventConfig = Field(
+        default_factory=lambda: TimedEventConfig(
+            enabled=True,
+            weekdays=[3, 7],
+            hour=21,
+            minute=0,
+            end_hour=22,
+            end_minute=0,
+            advance_minutes=5,
+            message=(
+                "👑 天子战\n"
+                "还有 {advance} 分钟开战（{start}–{end}）\n"
+                "请主公做好准备～"
+            ),
+        )
+    )
 
 
 class BroadcastLog(BaseModel):

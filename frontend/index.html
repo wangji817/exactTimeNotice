@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>三国群雄传平台司令台</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=20261106k" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20261109r" />
 </head>
 <body>
   <div class="app">
@@ -28,10 +28,25 @@
       </div>
     </header>
 
+    <section class="season-bar" id="seasonBar" aria-label="赛季进度">
+      <div class="season-bar-main">
+        <strong id="seasonTitle">赛季 —</strong>
+        <span id="seasonPhase">阶段 —</span>
+        <span id="seasonRemain">剩余 —</span>
+      </div>
+      <div class="season-bar-track" title="赛季进度">
+        <div class="season-bar-fill" id="seasonFill"></div>
+        <div class="season-bar-marks">
+          <span>阶段1</span><span>阶段2</span><span>阶段3</span>
+        </div>
+      </div>
+      <div class="season-bar-sub" id="seasonSub">加载中…</div>
+    </section>
+
     <section class="panel switch-bar" id="panelSwitches">
       <div class="switch-bar-head">
         <strong>功能开关</strong>
-        <span class="hint">顶部统一管理，改完请点「保存并即时生效」</span>
+        <span class="hint">赛季类依赖赛季期 · 活动类依赖活动期 · 普通类每周循环</span>
       </div>
       <div class="switch-grid">
         <label class="switch-item" title="开启后只记日志，不真实发到微信">
@@ -42,72 +57,134 @@
           </span>
         </label>
         <label class="switch-item" data-panel="panelQt">
-          <span>① 抢台子</span>
-          <span class="toggle">
-            <input type="checkbox" id="qtEnabled" />
-            <span></span>
-          </span>
-        </label>
-        <label class="switch-item" data-panel="panelJs">
-          <span>② 坚守城池</span>
-          <span class="toggle">
-            <input type="checkbox" id="jsEnabled" />
-            <span></span>
-          </span>
+          <span>抢台子 <em class="kind season">赛季</em></span>
+          <span class="toggle"><input type="checkbox" id="qtEnabled" /><span></span></span>
         </label>
         <label class="switch-item" data-panel="panelZg">
-          <span>③ 镇国台子</span>
-          <span class="toggle">
-            <input type="checkbox" id="zgEnabled" />
-            <span></span>
-          </span>
+          <span>镇国台子 <em class="kind season">赛季</em></span>
+          <span class="toggle"><input type="checkbox" id="zgEnabled" /><span></span></span>
         </label>
         <label class="switch-item" data-panel="panelSf">
-          <span>④ 四方都城</span>
-          <span class="toggle">
-            <input type="checkbox" id="sfEnabled" />
-            <span></span>
-          </span>
+          <span>四方都城 <em class="kind season">赛季</em></span>
+          <span class="toggle"><input type="checkbox" id="sfEnabled" /><span></span></span>
+        </label>
+        <label class="switch-item" data-panel="panelQy">
+          <span>群英会 <em class="kind event">活动</em></span>
+          <span class="toggle"><input type="checkbox" id="qyEnabled" /><span></span></span>
+        </label>
+        <label class="switch-item" data-panel="panelWc">
+          <span>王城争锋 <em class="kind event">活动</em></span>
+          <span class="toggle"><input type="checkbox" id="wcEnabled" /><span></span></span>
+        </label>
+        <label class="switch-item" data-panel="panelTz">
+          <span>天子战 <em class="kind normal">普通</em></span>
+          <span class="toggle"><input type="checkbox" id="tzEnabled" /><span></span></span>
+        </label>
+        <label class="switch-item" data-panel="panelJs">
+          <span>坚守城池 <em class="kind normal">普通</em></span>
+          <span class="toggle"><input type="checkbox" id="jsEnabled" /><span></span></span>
         </label>
         <label class="switch-item" data-panel="panelLk">
-          <span>⑤ 流寇攻城</span>
-          <span class="toggle">
-            <input type="checkbox" id="lkEnabled" />
-            <span></span>
-          </span>
+          <span>流寇攻城 <em class="kind normal">普通</em></span>
+          <span class="toggle"><input type="checkbox" id="lkEnabled" /><span></span></span>
+        </label>
+        <label class="switch-item" data-panel="panelDy">
+          <span>钓鱼 <em class="kind normal">普通</em></span>
+          <span class="toggle"><input type="checkbox" id="dyEnabled" /><span></span></span>
         </label>
       </div>
     </section>
 
     <div class="grid">
       <div class="stack main-stack">
-        <!-- 微信连接 -->
         <section class="panel" id="panelWechat">
-          <div class="panel-title">
-            <h2>微信连接</h2>
+          <div class="panel-title"><h2>微信连接 / 时间轴</h2></div>
+          <p class="panel-desc">群名须与微信独立窗标题一致。试发只发测试群。</p>
+          <div class="row">
+            <div class="field">
+              <label>目标微信群</label>
+              <input type="text" id="groupName" placeholder="例如：中年男人的浪漫" />
+            </div>
+            <div class="field">
+              <label>测试群（试发专用）</label>
+              <input type="text" id="testGroupName" placeholder="三国测试组" />
+            </div>
           </div>
-          <p class="panel-desc">使用本机已登录的官方 PC 微信向指定群发送播报。群名须与微信群名称完全一致。</p>
-          <div class="field">
-            <label>目标微信群名称</label>
-            <input type="text" id="groupName" placeholder="例如：三国群雄传-本盟" />
+          <div class="row">
+            <div class="field">
+              <label>忙时开始整点</label>
+              <input type="number" id="bwStart" min="0" max="23" />
+            </div>
+            <div class="field">
+              <label>忙时结束整点</label>
+              <input type="number" id="bwEnd" min="0" max="23" />
+            </div>
+            <div class="field" style="display:flex;align-items:flex-end;">
+              <div class="toggle-row" style="width:100%;margin:0;">
+                <div><strong>启用忙时窗口</strong></div>
+                <label class="toggle">
+                  <input type="checkbox" id="bwEnabled" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
           </div>
+          <p class="hint">仅在忙时整点范围内播报（如 9–23）；窗口外一律不发。</p>
+          <div class="row">
+            <div class="field">
+              <label>赛季名称</label>
+              <input type="text" id="seasonName" placeholder="S2" />
+            </div>
+            <div class="field">
+              <label>赛季天数</label>
+              <input type="number" id="seasonDays" min="1" max="365" />
+            </div>
+            <div class="field">
+              <label>每阶段天数</label>
+              <input type="number" id="phaseDays" min="1" max="365" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>赛季开始</label>
+              <div class="datetime-field">
+                <input type="date" id="seasonStartsAt_date" aria-label="赛季开始日期" />
+                <span class="dt-sep">·</span>
+                <input type="time" id="seasonStartsAt_time" aria-label="赛季开始时间" />
+              </div>
+            </div>
+            <div class="field">
+              <label>赛季结束</label>
+              <div class="datetime-field">
+                <input type="date" id="seasonEndsAt_date" aria-label="赛季结束日期" />
+                <span class="dt-sep">·</span>
+                <input type="time" id="seasonEndsAt_time" aria-label="赛季结束时间" />
+              </div>
+            </div>
+          </div>
+          <p class="hint">赛季类（抢台子 / 镇国 / 四方）仅在赛季期内执行。</p>
+          <div class="window-status" id="windowStatus">独立窗状态：—</div>
           <div class="btn-row">
+            <button class="btn btn-ghost" id="btnRefreshWindows">刷新窗口状态</button>
             <button class="btn btn-ghost" id="btnTestWechat">测试连接</button>
-            <button class="btn btn-primary" id="btnPreview">试发一条测试消息</button>
+            <button class="btn btn-primary" id="btnPreview">试发到测试群</button>
           </div>
         </section>
 
-        <!-- 抢台子 -->
         <section class="panel" id="panelQt">
           <div class="panel-title">
-            <h2>① 抢台子</h2>
+            <h2>抢台子 <em class="kind season">赛季</em></h2>
             <span class="panel-state" data-for="qtEnabled">已关闭</span>
           </div>
-          <p class="panel-desc">周一至周日，每日 9 点–24 点，整点前 N 分钟播报。周日 24 点可关闭。</p>
+          <p class="panel-desc">平日从开始整点起；周一用「周一开始整点」。与镇国冲突时只播镇国。</p>
           <div class="row">
             <div class="field">
-              <label>开始整点</label>
+              <label>平日开始整点</label>
               <input type="number" id="qtStart" min="0" max="24" />
+            </div>
+            <div class="field">
+              <label>周一开始整点</label>
+              <input type="number" id="qtMonStart" min="0" max="24" />
             </div>
             <div class="field">
               <label>结束整点</label>
@@ -121,14 +198,26 @@
             </div>
             <div class="field" style="display:flex;align-items:flex-end;">
               <div class="toggle-row" style="width:100%;margin:0;">
-                <div>
-                  <strong>周日 24 点跳过</strong>
-                </div>
+                <div><strong>周日 24 点跳过</strong></div>
                 <label class="toggle">
                   <input type="checkbox" id="qtSkipSun24" />
                   <span></span>
                 </label>
               </div>
+            </div>
+          </div>
+          <div class="mention-box">
+            <div class="toggle-row" style="margin:0 0 8px;">
+              <div><strong>@所有人</strong><span class="hint"> 可选</span></div>
+              <label class="toggle"><input type="checkbox" id="qtAtEveryone" /><span></span></label>
+            </div>
+            <div class="field" style="margin:0;">
+              <label>@ 部分成员（群内昵称）</label>
+              <div class="inline-add">
+                <input type="text" id="qtMemberInput" placeholder="输入昵称后添加" />
+                <button class="btn btn-ghost" type="button" data-add-member="qt">添加</button>
+              </div>
+              <div class="member-list" id="qtMembers"></div>
             </div>
           </div>
           <div class="field">
@@ -137,53 +226,47 @@
           </div>
         </section>
 
-        <!-- 坚守 -->
-        <section class="panel" id="panelJs">
-          <div class="panel-title">
-            <h2>② 坚守城池</h2>
-            <span class="panel-state" data-for="jsEnabled">已关闭</span>
-          </div>
-          <p class="panel-desc">周一至周日，在选定时刻播报坚守城池（默认 12:00、12:30）。</p>
-          <div class="field">
-            <label>播报时刻（可多选）</label>
-            <div class="chips" id="jsTimes"></div>
-          </div>
-          <div class="field">
-            <label>城池（可多选）</label>
-            <div class="chips" id="jsCities"></div>
-          </div>
-          <div class="field">
-            <label>播报文案（可用 {cities}）</label>
-            <textarea id="jsMessage"></textarea>
-          </div>
-        </section>
-
-        <!-- 镇国台子 -->
         <section class="panel" id="panelZg">
           <div class="panel-title">
-            <h2>③ 镇国台子</h2>
+            <h2>镇国台子 <em class="kind season">赛季</em></h2>
             <span class="panel-state" data-for="zgEnabled">已关闭</span>
           </div>
-          <p class="panel-desc">按星期与整点配置，提前播报并 @ 固定成员。成员昵称须与群内显示名一致。</p>
+          <p class="panel-desc">按星期与整点配置，可 @ 成员。周一可用独立开始整点过滤。</p>
           <div class="field">
-            <label>星期（可多选）</label>
+            <label>星期</label>
             <div class="chips" id="zgWeekdays"></div>
           </div>
           <div class="field">
-            <label>整点（可多选）</label>
+            <label>整点</label>
             <div class="chips" id="zgHours"></div>
           </div>
-          <div class="field">
-            <label>提前分钟数</label>
-            <input type="number" id="zgAdvance" min="0" max="59" />
-          </div>
-          <div class="field">
-            <label>@ 成员（与群内昵称一致）</label>
-            <div class="inline-add">
-              <input type="text" id="zgMemberInput" placeholder="输入群内昵称后添加" />
-              <button class="btn btn-ghost" id="btnAddMember" type="button">添加</button>
+          <div class="row">
+            <div class="field">
+              <label>平日起始整点</label>
+              <input type="number" id="zgStart" min="0" max="23" />
             </div>
-            <div class="member-list" id="zgMembers"></div>
+            <div class="field">
+              <label>周一起始整点</label>
+              <input type="number" id="zgMonStart" min="0" max="23" />
+            </div>
+            <div class="field">
+              <label>提前分钟数</label>
+              <input type="number" id="zgAdvance" min="0" max="59" />
+            </div>
+          </div>
+          <div class="mention-box">
+            <div class="toggle-row" style="margin:0 0 8px;">
+              <div><strong>@所有人</strong><span class="hint"> 可选</span></div>
+              <label class="toggle"><input type="checkbox" id="zgAtEveryone" /><span></span></label>
+            </div>
+            <div class="field" style="margin:0;">
+              <label>@ 部分成员（群内昵称）</label>
+              <div class="inline-add">
+                <input type="text" id="zgMemberInput" placeholder="输入昵称后添加" />
+                <button class="btn btn-ghost" type="button" data-add-member="zg">添加</button>
+              </div>
+              <div class="member-list" id="zgMembers"></div>
+            </div>
           </div>
           <div class="field">
             <label>播报文案（可用 {advance} {hour}）</label>
@@ -191,15 +274,14 @@
           </div>
         </section>
 
-        <!-- 四方都城 -->
         <section class="panel" id="panelSf">
           <div class="panel-title">
-            <h2>④ 四方都城</h2>
+            <h2>四方都城 <em class="kind season">赛季</em></h2>
             <span class="panel-state" data-for="sfEnabled">已关闭</span>
           </div>
-          <p class="panel-desc">默认周一至周五 13:00，可提前 N 分钟播报进攻/防守四方都城。</p>
+          <p class="panel-desc">平日 / 周末可分别配置进攻防守与都城。</p>
           <div class="field">
-            <label>星期（可多选，默认工作日）</label>
+            <label>星期</label>
             <div class="chips" id="sfWeekdays"></div>
           </div>
           <div class="row">
@@ -217,66 +299,283 @@
             </div>
           </div>
           <div class="field">
-            <label>模式</label>
+            <label>平日模式</label>
             <div class="chips" id="sfMode"></div>
           </div>
           <div class="field">
-            <label>都城（可多选）</label>
+            <label>平日都城</label>
             <div class="chips" id="sfCities"></div>
           </div>
           <div class="field">
-            <label>播报文案（可用 {advance} {mode} {cities} {hour} {minute}）</label>
+            <label>周末模式</label>
+            <div class="chips" id="sfWeekendMode"></div>
+          </div>
+          <div class="field">
+            <label>周末都城</label>
+            <div class="chips" id="sfWeekendCities"></div>
+          </div>
+          <div class="mention-box">
+            <div class="toggle-row" style="margin:0 0 8px;">
+              <div><strong>@所有人</strong><span class="hint"> 可选</span></div>
+              <label class="toggle"><input type="checkbox" id="sfAtEveryone" /><span></span></label>
+            </div>
+            <div class="field" style="margin:0;">
+              <label>@ 部分成员（群内昵称）</label>
+              <div class="inline-add">
+                <input type="text" id="sfMemberInput" placeholder="输入昵称后添加" />
+                <button class="btn btn-ghost" type="button" data-add-member="sf">添加</button>
+              </div>
+              <div class="member-list" id="sfMembers"></div>
+            </div>
+          </div>
+          <div class="field">
+            <label>播报文案（可用 {advance} {mode} {cities}）</label>
             <textarea id="sfMessage"></textarea>
           </div>
         </section>
 
-        <!-- 流寇攻城 -->
+        <section class="panel" id="panelQy">
+          <div class="panel-title">
+            <h2>群英会 <em class="kind event">活动</em></h2>
+            <span class="panel-state" data-for="qyEnabled">已关闭</span>
+          </div>
+          <p class="panel-desc">活动期内按星期循环；结束后无下一轮，需配置新活动期补充。</p>
+          <div class="field"><label>星期</label><div class="chips" id="qyWeekdays"></div></div>
+          <div class="row">
+            <div class="field"><label>开始时</label><input type="number" id="qyHour" min="0" max="23" /></div>
+            <div class="field"><label>开始分</label><input type="number" id="qyMinute" min="0" max="59" /></div>
+            <div class="field"><label>结束时</label><input type="number" id="qyEndHour" min="0" max="23" /></div>
+            <div class="field"><label>结束分</label><input type="number" id="qyEndMinute" min="0" max="59" /></div>
+            <div class="field"><label>提前分</label><input type="number" id="qyAdvance" min="0" max="59" /></div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>活动开始</label>
+              <div class="datetime-field">
+                <input type="date" id="qyStartsAt_date" />
+                <span class="dt-sep">·</span>
+                <input type="time" id="qyStartsAt_time" />
+              </div>
+            </div>
+            <div class="field">
+              <label>活动结束</label>
+              <div class="datetime-field">
+                <input type="date" id="qyEndsAt_date" />
+                <span class="dt-sep">·</span>
+                <input type="time" id="qyEndsAt_time" />
+              </div>
+            </div>
+          </div>
+          <div class="mention-box">
+            <div class="toggle-row" style="margin:0 0 8px;">
+              <div><strong>@所有人</strong><span class="hint"> 可选</span></div>
+              <label class="toggle"><input type="checkbox" id="qyAtEveryone" /><span></span></label>
+            </div>
+            <div class="field" style="margin:0;">
+              <label>@ 部分成员（群内昵称）</label>
+              <div class="inline-add">
+                <input type="text" id="qyMemberInput" placeholder="输入昵称后添加" />
+                <button class="btn btn-ghost" type="button" data-add-member="qy">添加</button>
+              </div>
+              <div class="member-list" id="qyMembers"></div>
+            </div>
+          </div>
+          <div class="field"><label>播报文案（{advance} {start} {end}）</label><textarea id="qyMessage"></textarea></div>
+        </section>
+
+        <section class="panel" id="panelWc">
+          <div class="panel-title">
+            <h2>王城争锋 <em class="kind event">活动</em></h2>
+            <span class="panel-state" data-for="wcEnabled">已关闭</span>
+          </div>
+          <p class="panel-desc">活动期内按星期循环；结束后无下一轮。</p>
+          <div class="field"><label>星期</label><div class="chips" id="wcWeekdays"></div></div>
+          <div class="row">
+            <div class="field"><label>开始时</label><input type="number" id="wcHour" min="0" max="23" /></div>
+            <div class="field"><label>开始分</label><input type="number" id="wcMinute" min="0" max="59" /></div>
+            <div class="field"><label>结束时</label><input type="number" id="wcEndHour" min="0" max="23" /></div>
+            <div class="field"><label>结束分</label><input type="number" id="wcEndMinute" min="0" max="59" /></div>
+            <div class="field"><label>提前分</label><input type="number" id="wcAdvance" min="0" max="59" /></div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>活动开始</label>
+              <div class="datetime-field">
+                <input type="date" id="wcStartsAt_date" />
+                <span class="dt-sep">·</span>
+                <input type="time" id="wcStartsAt_time" />
+              </div>
+            </div>
+            <div class="field">
+              <label>活动结束</label>
+              <div class="datetime-field">
+                <input type="date" id="wcEndsAt_date" />
+                <span class="dt-sep">·</span>
+                <input type="time" id="wcEndsAt_time" />
+              </div>
+            </div>
+          </div>
+          <div class="mention-box">
+            <div class="toggle-row" style="margin:0 0 8px;">
+              <div><strong>@所有人</strong><span class="hint"> 可选</span></div>
+              <label class="toggle"><input type="checkbox" id="wcAtEveryone" /><span></span></label>
+            </div>
+            <div class="field" style="margin:0;">
+              <label>@ 部分成员（群内昵称）</label>
+              <div class="inline-add">
+                <input type="text" id="wcMemberInput" placeholder="输入昵称后添加" />
+                <button class="btn btn-ghost" type="button" data-add-member="wc">添加</button>
+              </div>
+              <div class="member-list" id="wcMembers"></div>
+            </div>
+          </div>
+          <div class="field"><label>播报文案（{advance} {start} {end}）</label><textarea id="wcMessage"></textarea></div>
+        </section>
+
+        <section class="panel" id="panelTz">
+          <div class="panel-title">
+            <h2>天子战 <em class="kind normal">普通</em></h2>
+            <span class="panel-state" data-for="tzEnabled">已关闭</span>
+          </div>
+          <p class="panel-desc">普通类：默认每周三、周日固定循环，不依赖活动期。</p>
+          <div class="field"><label>星期</label><div class="chips" id="tzWeekdays"></div></div>
+          <div class="row">
+            <div class="field"><label>开始时</label><input type="number" id="tzHour" min="0" max="23" /></div>
+            <div class="field"><label>开始分</label><input type="number" id="tzMinute" min="0" max="59" /></div>
+            <div class="field"><label>结束时</label><input type="number" id="tzEndHour" min="0" max="23" /></div>
+            <div class="field"><label>结束分</label><input type="number" id="tzEndMinute" min="0" max="59" /></div>
+            <div class="field"><label>提前分</label><input type="number" id="tzAdvance" min="0" max="59" /></div>
+          </div>
+          <div class="row" hidden>
+            <div class="field">
+              <label>活动开始</label>
+              <div class="datetime-field">
+                <input type="date" id="tzStartsAt_date" />
+                <span class="dt-sep">·</span>
+                <input type="time" id="tzStartsAt_time" />
+              </div>
+            </div>
+            <div class="field">
+              <label>活动结束</label>
+              <div class="datetime-field">
+                <input type="date" id="tzEndsAt_date" />
+                <span class="dt-sep">·</span>
+                <input type="time" id="tzEndsAt_time" />
+              </div>
+            </div>
+          </div>
+          <div class="mention-box">
+            <div class="toggle-row" style="margin:0 0 8px;">
+              <div><strong>@所有人</strong><span class="hint"> 可选</span></div>
+              <label class="toggle"><input type="checkbox" id="tzAtEveryone" /><span></span></label>
+            </div>
+            <div class="field" style="margin:0;">
+              <label>@ 部分成员（群内昵称）</label>
+              <div class="inline-add">
+                <input type="text" id="tzMemberInput" placeholder="输入昵称后添加" />
+                <button class="btn btn-ghost" type="button" data-add-member="tz">添加</button>
+              </div>
+              <div class="member-list" id="tzMembers"></div>
+            </div>
+          </div>
+          <div class="field"><label>播报文案（{advance} {start} {end}）</label><textarea id="tzMessage"></textarea></div>
+        </section>
+
+        <section class="panel" id="panelJs">
+          <div class="panel-title">
+            <h2>坚守城池 <em class="kind normal">普通</em></h2>
+            <span class="panel-state" data-for="jsEnabled">已关闭</span>
+          </div>
+          <p class="panel-desc">每周固定循环，不依赖赛季；可提前 N 分钟。</p>
+          <div class="field"><label>播报时刻</label><div class="chips" id="jsTimes"></div></div>
+          <div class="field"><label>城池</label><div class="chips" id="jsCities"></div></div>
+          <div class="field"><label>提前分钟数</label><input type="number" id="jsAdvance" min="0" max="59" /></div>
+          <div class="mention-box">
+            <div class="toggle-row" style="margin:0 0 8px;">
+              <div><strong>@所有人</strong><span class="hint"> 可选</span></div>
+              <label class="toggle"><input type="checkbox" id="jsAtEveryone" /><span></span></label>
+            </div>
+            <div class="field" style="margin:0;">
+              <label>@ 部分成员（群内昵称）</label>
+              <div class="inline-add">
+                <input type="text" id="jsMemberInput" placeholder="输入昵称后添加" />
+                <button class="btn btn-ghost" type="button" data-add-member="js">添加</button>
+              </div>
+              <div class="member-list" id="jsMembers"></div>
+            </div>
+          </div>
+          <div class="field"><label>播报文案（{advance} {cities}）</label><textarea id="jsMessage"></textarea></div>
+        </section>
+
         <section class="panel" id="panelLk">
           <div class="panel-title">
-            <h2>⑤ 流寇攻城</h2>
+            <h2>流寇攻城 <em class="kind normal">普通</em></h2>
             <span class="panel-state" data-for="lkEnabled">已关闭</span>
           </div>
-          <p class="panel-desc">周一至周日，默认 10:00 / 15:00，可提前 N 分钟播报流寇攻城。</p>
-          <div class="field">
-            <label>播报时刻（可多选）</label>
-            <div class="chips" id="lkTimes"></div>
+          <p class="panel-desc">每周固定循环。</p>
+          <div class="field"><label>播报时刻</label><div class="chips" id="lkTimes"></div></div>
+          <div class="field"><label>提前分钟数</label><input type="number" id="lkAdvance" min="0" max="59" /></div>
+          <div class="mention-box">
+            <div class="toggle-row" style="margin:0 0 8px;">
+              <div><strong>@所有人</strong><span class="hint"> 可选</span></div>
+              <label class="toggle"><input type="checkbox" id="lkAtEveryone" /><span></span></label>
+            </div>
+            <div class="field" style="margin:0;">
+              <label>@ 部分成员（群内昵称）</label>
+              <div class="inline-add">
+                <input type="text" id="lkMemberInput" placeholder="输入昵称后添加" />
+                <button class="btn btn-ghost" type="button" data-add-member="lk">添加</button>
+              </div>
+              <div class="member-list" id="lkMembers"></div>
+            </div>
           </div>
-          <div class="field">
-            <label>提前分钟数</label>
-            <input type="number" id="lkAdvance" min="0" max="59" />
+          <div class="field"><label>播报文案（{advance} {time}）</label><textarea id="lkMessage"></textarea></div>
+        </section>
+
+        <section class="panel" id="panelDy">
+          <div class="panel-title">
+            <h2>钓鱼 <em class="kind normal">普通</em></h2>
+            <span class="panel-state" data-for="dyEnabled">已关闭</span>
           </div>
-          <div class="field">
-            <label>播报文案（可用 {advance} {time} {hour} {minute}）</label>
-            <textarea id="lkMessage"></textarea>
+          <p class="panel-desc">每日固定循环，默认 18:00。</p>
+          <div class="field"><label>播报时刻</label><div class="chips" id="dyTimes"></div></div>
+          <div class="field"><label>提前分钟数</label><input type="number" id="dyAdvance" min="0" max="59" /></div>
+          <div class="mention-box">
+            <div class="toggle-row" style="margin:0 0 8px;">
+              <div><strong>@所有人</strong><span class="hint"> 可选</span></div>
+              <label class="toggle"><input type="checkbox" id="dyAtEveryone" /><span></span></label>
+            </div>
+            <div class="field" style="margin:0;">
+              <label>@ 部分成员（群内昵称）</label>
+              <div class="inline-add">
+                <input type="text" id="dyMemberInput" placeholder="输入昵称后添加" />
+                <button class="btn btn-ghost" type="button" data-add-member="dy">添加</button>
+              </div>
+              <div class="member-list" id="dyMembers"></div>
+            </div>
           </div>
+          <div class="field"><label>播报文案（{advance} {time}）</label><textarea id="dyMessage"></textarea></div>
         </section>
       </div>
 
       <aside class="stack side-stack">
         <section class="panel side-panel">
-          <div class="panel-title">
-            <h2>待执行任务</h2>
-          </div>
-          <p class="panel-desc">保存配置后即时重载。以下为调度器中即将触发的任务。</p>
-          <div class="jobs" id="jobsList">
-            <div class="empty">加载中…</div>
-          </div>
+          <div class="panel-title"><h2>待执行任务</h2></div>
+          <p class="panel-desc">保存配置后即时重载。</p>
+          <div class="jobs" id="jobsList"><div class="empty">加载中…</div></div>
         </section>
-
         <section class="panel side-panel">
           <div class="panel-title">
             <h2>播报日志</h2>
             <button class="btn btn-ghost" id="btnRefreshLogs">刷新</button>
           </div>
-          <div class="logs" id="logsList">
-            <div class="empty">暂无日志</div>
-          </div>
+          <div class="logs" id="logsList"><div class="empty">暂无日志</div></div>
         </section>
       </aside>
     </div>
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="/static/js/app.js?v=20261107a"></script>
+  <script src="/static/js/app.js?v=20261109r"></script>
 </body>
 </html>

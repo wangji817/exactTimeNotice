@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import threading
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -57,9 +59,53 @@ class AuthMiddleware(BaseHTTPMiddleware):
 app.add_middleware(AuthMiddleware)
 
 
+def _startup_test_group_probe() -> None:
+    """启动数秒后自动向测试群试发，验证搜群/发送链路。"""
+    time.sleep(5)
+    settings = config_manager.get()
+    test_group = (settings.wechat.test_group_name or "三国测试组").strip()
+    print(f"[Startup] 自动测试群试发：「{test_group}」…")
+    try:
+        log = wechat_sender.probe_test_group(
+            reason="启动检测", skip_if_dry_run=True
+        )
+        print(
+            f"[Startup] 测试群结果：success={log.success} detail={log.detail}"
+        )
+    except Exception as exc:  # noqa: BLE001
+        print(f"[Startup] 测试群试发异常：{exc}")
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     broadcast_scheduler.start()
+
+    def _startup_probe() -> None:
+        import threading
+        import time
+
+        def _run() -> None:
+            time.sleep(2.0)
+            try:
+                settings = config_manager.get()
+                if settings.wechat.dry_run:
+                    print("[Startup] dry_run=true，跳过测试群试发")
+                    return
+                log = wechat_sender.probe_test_group(
+                    reason="启动检测", skip_if_dry_run=False
+                )
+                print(f"[Startup] 测试群试发：success={log.success} detail={log.detail}")
+            except Exception as exc:  # noqa: BLE001
+                print(f"[Startup] 测试群试发异常：{exc}")
+
+        threading.Thread(target=_run, name="wx-startup-probe", daemon=True).start()
+
+    _startup_probe()
+    threading.Thread(
+        target=_startup_test_group_probe,
+        name="startup-probe",
+        daemon=True,
+    ).start()
 
 
 @app.on_event("shutdown")
@@ -170,6 +216,26 @@ def wechat_wake():
     return wechat_sender.probe_status(try_wake=True)
 
 
+@app.get("/api/wechat/windows")
+def wechat_windows():
+    """枚举本机微信聊天窗口（含独立窗标题）。"""
+    windows = wechat_sender.list_chat_windows()
+    settings = config_manager.get()
+    group = (settings.wechat.group_name or '').strip()
+    test_group = (settings.wechat.test_group_name or "三国测试组").strip()
+    for w in windows:
+        title = (w.get("title") or "").strip()
+        w["is_target"] = bool(group) and _chat_title_in_window(title, group)
+        w["is_test"] = bool(test_group) and _chat_title_in_window(title, test_group)
+    return {"windows": windows}
+
+
+def _chat_title_in_window(title: str, group_name: str) -> bool:
+    from .wechat_sender import _chat_title_matches
+
+    return _chat_title_matches(title, group_name)
+
+
 @app.post("/api/wechat/test")
 def test_wechat():
     return wechat_sender.test_connection()
@@ -177,15 +243,23 @@ def test_wechat():
 
 @app.post("/api/broadcast/preview")
 def preview_broadcast(body: dict):
-    feature = body.get("feature", "手动试发")
-    message = body.get("message", "").strip()
-    members = body.get("members") or []
+    """手动试发：只发往测试群，不走正式群。"""
+    settings = config_manager.get()
+    test_group = (settings.wechat.test_group_name or "三国测试组").strip()
+    feature = (body.get("feature") or "手动试发").strip() or "手动试发"
+    message = (body.get("message") or "").strip()
     if not message:
-        raise HTTPException(status_code=400, detail="消息内容不能为空")
-    log = wechat_sender.send(
-        feature, message, at_members=members, immediate=True
+        message = f"【司令台】{feature} 试发：通道检测 OK"
+    members = body.get("members") or []
+    if not test_group:
+        raise HTTPException(status_code=400, detail="未配置测试群名称")
+    return wechat_sender.send(
+        feature,
+        message,
+        at_members=members,
+        immediate=True,
+        force_group=test_group,
     )
-    return log
 
 
 @app.post("/api/scheduler/reload")
