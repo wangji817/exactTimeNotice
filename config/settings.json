@@ -65,11 +65,11 @@
       7
     ],
     "hours": [
-      9,
-      10,
-      11,
-      12,
-      13
+      15,
+      16,
+      17,
+      18,
+      19
     ],
     "start_hour": 9,
     "monday_start_hour": 10,
@@ -124,7 +124,7 @@
     "message": "🎣 钓鱼 · 还有 {advance} 分钟（{time}）"
   },
   "qun_ying_hui": {
-    "at_everyone": false,
+    "at_everyone": true,
     "members": [],
     "enabled": true,
     "weekdays": [
@@ -140,7 +140,7 @@
     "message": "🏆 群英会\n还有 {advance} 分钟开赛（{start}–{end}）\n请主公准时到场～"
   },
   "wang_cheng": {
-    "at_everyone": false,
+    "at_everyone": true,
     "members": [],
     "enabled": true,
     "weekdays": [
