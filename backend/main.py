@@ -59,52 +59,31 @@ class AuthMiddleware(BaseHTTPMiddleware):
 app.add_middleware(AuthMiddleware)
 
 
-def _startup_test_group_probe() -> None:
-    """启动数秒后自动向测试群试发，验证搜群/发送链路。"""
-    time.sleep(5)
-    settings = config_manager.get()
-    test_group = (settings.wechat.test_group_name or "三国测试组").strip()
-    print(f"[Startup] 自动测试群试发：「{test_group}」…")
-    try:
-        log = wechat_sender.probe_test_group(
-            reason="启动检测", skip_if_dry_run=True
-        )
-        print(
-            f"[Startup] 测试群结果：success={log.success} detail={log.detail}"
-        )
-    except Exception as exc:  # noqa: BLE001
-        print(f"[Startup] 测试群试发异常：{exc}")
-
-
 @app.on_event("startup")
 def on_startup() -> None:
     broadcast_scheduler.start()
 
     def _startup_probe() -> None:
-        import threading
-        import time
+        """启动后只试发一次测试群，校验发送通道。"""
+        time.sleep(2.0)
+        try:
+            settings = config_manager.get()
+            if settings.wechat.dry_run:
+                print("[Startup] dry_run=true，跳过测试群试发")
+                return
+            test_group = (settings.wechat.test_group_name or "三国测试组").strip()
+            print(f"[Startup] 自动测试群试发：「{test_group}」…")
+            log = wechat_sender.probe_test_group(
+                reason="启动检测", skip_if_dry_run=False
+            )
+            print(
+                f"[Startup] 测试群结果：success={log.success} detail={log.detail}"
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"[Startup] 测试群试发异常：{exc}")
 
-        def _run() -> None:
-            time.sleep(2.0)
-            try:
-                settings = config_manager.get()
-                if settings.wechat.dry_run:
-                    print("[Startup] dry_run=true，跳过测试群试发")
-                    return
-                log = wechat_sender.probe_test_group(
-                    reason="启动检测", skip_if_dry_run=False
-                )
-                print(f"[Startup] 测试群试发：success={log.success} detail={log.detail}")
-            except Exception as exc:  # noqa: BLE001
-                print(f"[Startup] 测试群试发异常：{exc}")
-
-        threading.Thread(target=_run, name="wx-startup-probe", daemon=True).start()
-
-    _startup_probe()
     threading.Thread(
-        target=_startup_test_group_probe,
-        name="startup-probe",
-        daemon=True,
+        target=_startup_probe, name="wx-startup-probe", daemon=True
     ).start()
 
 
