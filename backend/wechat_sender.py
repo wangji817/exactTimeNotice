@@ -45,6 +45,31 @@ def _apply_priority_rules(items: list[dict]) -> list[dict]:
     return items
 
 
+def _coalesce_mentions(items: list[dict]) -> list[str]:
+    """合并多条播报的 @ 列表。
+
+    任一条含 @所有人 → 整条消息只保留一个「所有人」，隐藏全部成员。
+    否则去重保留成员昵称。
+    """
+    has_everyone = False
+    members: list[str] = []
+    seen: set[str] = set()
+    for it in items:
+        for raw in it.get("at_members") or []:
+            name = (raw or "").strip()
+            if not name:
+                continue
+            if name == "所有人":
+                has_everyone = True
+                continue
+            if name not in seen:
+                seen.add(name)
+                members.append(name)
+    if has_everyone:
+        return ["所有人"]
+    return members
+
+
 def _compose_batch(items: list[dict]) -> tuple[str, str, list[str]]:
     """将多条播报拼成一条：正文自带标题，块之间空一行。"""
     items = _apply_priority_rules(list(items))
@@ -60,14 +85,7 @@ def _compose_batch(items: list[dict]) -> tuple[str, str, list[str]]:
         )
     )
     ordered = [it for _, it in indexed]
-
-    at_all: list[str] = []
-    seen_at: set[str] = set()
-    for it in ordered:
-        for name in it.get("at_members") or []:
-            if name and name not in seen_at and name != "所有人":
-                seen_at.add(name)
-                at_all.append(name)
+    at_all = _coalesce_mentions(ordered)
 
     if len(ordered) == 1:
         only = ordered[0]
@@ -173,15 +191,6 @@ class WechatSender:
             except Exception:  # noqa: BLE001
                 pass
         return log
-
-    def _merge_at_everyone(self, at_members: list[str], enabled: bool) -> list[str]:
-        names = [m for m in at_members if m]
-        if not enabled:
-            return names
-        # 微信 @所有人：输入 @ 后选「所有人」
-        if not any(_norm_chat_name(m) == _norm_chat_name("所有人") for m in names):
-            names = ["所有人", *names]
-        return names
 
     def probe_test_group(
         self, *, reason: str = "通道检测", skip_if_dry_run: bool = True

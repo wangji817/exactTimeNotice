@@ -79,11 +79,15 @@ def kind_of(feature: str) -> BroadcastKind:
 
 
 def resolve_mentions(cfg) -> list[str]:
-    """根据 at_everyone / members 生成微信 @ 列表（可同时启用）。"""
-    out: list[str] = []
+    """生成微信 @ 列表。
+
+    优先级：@所有人 > @部分成员。
+    两者同时开启时只 @所有人，避免重复打扰。
+    """
     if getattr(cfg, "at_everyone", False):
-        out.append("所有人")
-    seen = set(out)
+        return ["所有人"]
+    out: list[str] = []
+    seen: set[str] = set()
     for raw in getattr(cfg, "members", None) or []:
         name = (raw or "").strip()
         if not name or name in seen or name == "所有人":

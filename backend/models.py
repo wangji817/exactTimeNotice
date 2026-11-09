@@ -33,7 +33,10 @@ class SeasonConfig(BaseModel):
 
 
 class MentionFields(BaseModel):
-    """所有播报通用：可选 @所有人 / @部分成员。"""
+    """所有播报通用：可选 @所有人 / @部分成员。
+
+    优先级：at_everyone 开启时只 @所有人；否则才 @ members。
+    """
 
     at_everyone: bool = False
     members: list[str] = Field(default_factory=list)
