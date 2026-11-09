@@ -94,7 +94,7 @@
     "advance_minutes": 5,
     "mode": "防守",
     "cities": [
-      "建业"
+      "长沙"
     ],
     "weekend_mode": "防守",
     "weekend_cities": [
@@ -135,8 +135,8 @@
     "end_hour": 20,
     "end_minute": 30,
     "advance_minutes": 5,
-    "starts_at": "",
-    "ends_at": "",
+    "starts_at": "2026-11-02T10:00:00",
+    "ends_at": "2026-11-29T20:00:00",
     "message": "🏆 群英会\n还有 {advance} 分钟开赛（{start}–{end}）\n请主公准时到场～"
   },
   "wang_cheng": {
@@ -152,8 +152,8 @@
     "end_hour": 21,
     "end_minute": 30,
     "advance_minutes": 5,
-    "starts_at": "",
-    "ends_at": "",
+    "starts_at": "2026-11-02T09:00:00",
+    "ends_at": "2026-11-26T21:30:00",
     "message": "🏰 王城争锋\n还有 {advance} 分钟开赛（{start}–{end}）\n请队伍成员准时上线～"
   },
   "tian_zi_zhan": {
