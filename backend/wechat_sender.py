@@ -319,111 +319,122 @@ class WechatSender:
     def _send_uia(
         self, group_name: str, message: str, at_members: list[str]
     ) -> None:
+        """优先已存在的独立聊天窗直发；没有才回退主窗搜群。发完不 Esc、不关独立窗。"""
         import uiautomation as auto
 
-        print(f"[Wechat] 开始发送 -> 群「{group_name}」")
-        wx = _ensure_wechat_window(auto)
-        print("[Wechat] 已定位窗口，准备置前")
-        try:
-            hwnd = int(getattr(wx, "NativeWindowHandle", 0) or 0)
-        except Exception as exc:  # noqa: BLE001
-            raise RuntimeError(f"读取微信窗口句柄失败：{exc}") from exc
-        if not hwnd:
-            info = _inspect_wechat_ui()
-            hwnd = int(info.get("hwnd") or 0)
-        if not hwnd:
-            raise RuntimeError("无法获取微信主窗口句柄，请先手动打开微信主界面")
+        target = (group_name or "").strip()
+        print(f"[Wechat] 开始发送 -> 群「{target}」")
+        if not target:
+            raise RuntimeError("目标群名为空")
 
+        used_separate = False
+        hwnd = 0
+        main_hwnd = 0
         send_ok = False
+
         try:
-            # 托盘隐藏时先用快捷键唤醒，并校验当前前台就是微信主窗口
-            print("[Wechat] 确保窗口可见并识别前台是否为微信")
-            hwnd = _ensure_wechat_visible(hwnd)
-            time.sleep(0.25)
-            fg = _assert_foreground_is_wechat(expected_hwnd=hwnd)
-            print(
-                f"[Wechat] 前台已确认为微信："
-                f"hwnd={fg.get('hwnd')} title={fg.get('title')!r} "
-                f"class={fg.get('class')!r} exe={fg.get('exe')}"
-            )
+            # 1) 已有独立窗：直接打字发送，绝不搜群、不按 Esc
+            sep = _find_separate_chat_window(target)
+            if not sep:
+                print("[Wechat] 暂未见独立窗，尝试唤醒后再找（不主动关窗）")
+                _wake_wechat_if_needed()
+                time.sleep(0.45)
+                sep = _find_separate_chat_window(target)
+
+            if sep:
+                hwnd = int(sep["hwnd"])
+                used_separate = True
+                print(
+                    f"[Wechat] 独立窗直发（跳过搜群） title={sep.get('title')!r} "
+                    f"hwnd={hwnd} class={sep.get('class')!r}"
+                )
+                _restore_and_foreground(hwnd)
+                time.sleep(0.15)
+                _type_into_chat_window(
+                    auto, hwnd, message, at_members, separate=True
+                )
+                send_ok = True
+                print(f"[Wechat] 独立窗发送完成 -> 「{target}」（窗口保持打开）")
+                return
+
+            # 2) 无独立窗：回退主窗搜群
+            print("[Wechat] 未找到独立窗，回退主窗口搜群")
+            wx = _ensure_wechat_window(auto)
+            try:
+                hwnd = int(getattr(wx, "NativeWindowHandle", 0) or 0)
+            except Exception as exc:  # noqa: BLE001
+                raise RuntimeError(f"读取微信窗口句柄失败：{exc}") from exc
+            if not hwnd:
+                info = _inspect_wechat_ui()
+                hwnd = int(info.get("hwnd") or 0)
+            if not hwnd:
+                raise RuntimeError(
+                    f"未找到群「{target}」的独立聊天窗，且无法定位微信主窗口。"
+                    "请先把该群拉成独立窗口并保持打开"
+                )
 
             main_hwnd = hwnd
-            main_wx = wx
+            print("[Wechat] 确保主窗可见")
+            hwnd = _ensure_wechat_visible(hwnd)
+            main_hwnd = hwnd
+            time.sleep(0.2)
+            _assert_foreground_is_wechat(expected_hwnd=hwnd)
 
-            # 搜群不走 OCR。若点开后是独立聊天窗，用窗口标题模糊匹配群名即可确认
-            print("[Wechat] 搜索并打开目标群（无 OCR）")
-            _search_open_group_fast(main_wx, auto, main_hwnd, group_name)
-
-            wx, hwnd, is_separate = _resolve_chat_target(
-                auto, main_wx, main_hwnd, group_name
-            )
+            print("[Wechat] 搜索并打开目标群")
+            _search_open_group_fast(wx, auto, hwnd, target)
+            wx, hwnd, is_separate = _resolve_chat_target(auto, wx, hwnd, target)
             if is_separate:
+                used_separate = True
                 print(
-                    f"[Wechat] 独立窗标题模糊匹配成功 → 确认为目标群，"
-                    f"title={_window_title(hwnd)!r} hwnd={hwnd}"
+                    f"[Wechat] 搜群后出现独立窗，改打 title={_window_title(hwnd)!r} "
+                    f"hwnd={hwnd}"
                 )
-                _refocus_wechat(hwnd)
-            else:
-                print(
-                    "[Wechat] 未出现独立聊天窗，回退主窗口会话发送"
-                    "（主窗标题一般是「微信」，无法用标题校验群名）"
-                )
-                _leave_search_mode(auto, wx, hwnd)
-                _refocus_wechat(hwnd)
-
-            _click_chat_area(wx, auto, hwnd)
-            _refocus_wechat(hwnd)
-            time.sleep(0.15)
-
-            print("[Wechat] 聚焦输入框并发送")
-            if is_separate:
                 _type_into_chat_window(
                     auto, hwnd, message, at_members, separate=True
                 )
             else:
-                _focus_chat_input(wx, auto, hwnd)
+                print("[Wechat] 仍无独立窗，在主窗会话内发送")
+                # 仅主窗搜群浮层需要 Esc；独立窗路径禁止 Esc（会关窗）
+                _leave_search_mode(auto, wx, hwnd)
                 _refocus_wechat(hwnd)
+                _click_chat_area(wx, auto, hwnd)
+                _focus_chat_input(wx, auto, hwnd)
                 time.sleep(0.15)
-
-                if not _is_foreground(hwnd):
-                    _refocus_wechat(hwnd)
-                    _focus_chat_input(wx, auto, hwnd)
-                    time.sleep(0.15)
-
                 for member in at_members:
                     auto.SendKeys("@", waitTime=0.15)
                     _clipboard_copy(member)
                     auto.SendKeys("{Ctrl}v", waitTime=0.2)
-                    time.sleep(0.45)
+                    time.sleep(0.55 if member == "所有人" else 0.45)
                     auto.SendKeys("{Enter}", waitTime=0.25)
-
                 _clipboard_copy(message)
                 auto.SendKeys("{Ctrl}v", waitTime=0.3)
                 time.sleep(0.25)
                 auto.SendKeys("{Enter}", waitTime=0.3)
-                time.sleep(0.35)
+                time.sleep(0.3)
             send_ok = True
-            print(f"[Wechat] 发送步骤完成 -> 群「{group_name}」")
+            print(f"[Wechat] 发送步骤完成 -> 「{target}」")
         finally:
-            # 轻量收尾：少按 Esc，优先把焦点还回微信，避免界面像卡死
+            # 独立窗：绝不 Esc（Esc 会关闭独立聊天窗）
+            if not used_separate:
+                try:
+                    if hwnd:
+                        _refocus_wechat(int(hwnd))
+                except Exception:  # noqa: BLE001
+                    pass
             try:
-                target = hwnd if "hwnd" in locals() else 0
-                if target:
-                    _refocus_wechat(int(target))
-                    auto.SendKeys("{Esc}", waitTime=0.08)
-                    _refocus_wechat(int(target))
-            except Exception:  # noqa: BLE001
-                pass
-            try:
-                _set_topmost(hwnd, False)
-                if "main_hwnd" in locals():
-                    _set_topmost(main_hwnd, False)
+                if hwnd:
+                    _set_topmost(int(hwnd), False)
+                if main_hwnd and main_hwnd != hwnd:
+                    _set_topmost(int(main_hwnd), False)
             except Exception:  # noqa: BLE001
                 pass
             if send_ok:
-                print("[Wechat] 发送结束，已恢复普通窗口状态")
+                print(
+                    "[Wechat] 发送结束"
+                    + ("，独立窗保持打开" if used_separate else "")
+                )
             else:
-                print("[Wechat] 发送未完成，已尝试恢复微信界面")
+                print("[Wechat] 发送未完成")
 
     def probe_status(self, *, try_wake: bool = False) -> dict:
         """检测 PC 微信进程/窗口/是否已登录，可选尝试快捷键唤醒。"""
@@ -1738,23 +1749,30 @@ def _leave_search_mode(auto, wx, hwnd: int) -> None:
 
 
 def _recover_wechat_ui_after_failure() -> None:
-    """超时/失败后的尽力恢复：取消置顶 + 快捷键不会主动隐藏。"""
+    """超时/失败后的尽力恢复：只取消置顶，不按 Esc（避免关掉独立聊天窗）。"""
+    # 优先恢复已打开的独立窗；不要 Esc
+    settings = config_manager.get()
+    for name in (
+        (settings.wechat.group_name or "").strip(),
+        (settings.wechat.test_group_name or "").strip(),
+    ):
+        if not name:
+            continue
+        sep = _find_separate_chat_window(name)
+        if sep:
+            hwnd = int(sep.get("hwnd") or 0)
+            if hwnd:
+                print(f"[Wechat] 异常恢复：仅取消独立窗置顶 hwnd={hwnd}")
+                _set_topmost(hwnd, False)
+                return
     info = _inspect_wechat_ui()
     hwnd = int(info.get("hwnd") or 0)
     if not hwnd:
         return
-    print(f"[Wechat] 异常恢复：取消置顶 hwnd={hwnd}")
+    print(f"[Wechat] 异常恢复：取消主窗置顶 hwnd={hwnd}（不 Esc）")
     _set_topmost(hwnd, False)
     try:
         _restore_and_foreground(hwnd)
-    except Exception:  # noqa: BLE001
-        pass
-    # 无法在此可靠拿到 auto/wx，多发 Esc 也无窗口上下文；用户可手动 Esc
-    try:
-        import uiautomation as auto
-
-        auto.SendKeys("{Esc}", waitTime=0.1)
-        auto.SendKeys("{Esc}", waitTime=0.1)
     except Exception:  # noqa: BLE001
         pass
 

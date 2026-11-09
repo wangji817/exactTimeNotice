@@ -218,22 +218,29 @@ def wechat_wake():
 
 @app.get("/api/wechat/windows")
 def wechat_windows():
-    """枚举本机微信聊天窗口（含独立窗标题）。"""
-    windows = wechat_sender.list_chat_windows()
+    """目标群 / 测试群独立窗状态（供司令台展示）。"""
+    from .wechat_sender import _chat_title_matches, _find_separate_chat_window
+
     settings = config_manager.get()
-    group = (settings.wechat.group_name or '').strip()
+    group = (settings.wechat.group_name or "").strip()
     test_group = (settings.wechat.test_group_name or "三国测试组").strip()
+    windows = wechat_sender.list_chat_windows()
     for w in windows:
         title = (w.get("title") or "").strip()
-        w["is_target"] = bool(group) and _chat_title_in_window(title, group)
-        w["is_test"] = bool(test_group) and _chat_title_in_window(title, test_group)
-    return {"windows": windows}
+        w["is_target"] = bool(group) and _chat_title_matches(title, group)
+        w["is_test"] = bool(test_group) and _chat_title_matches(title, test_group)
 
-
-def _chat_title_in_window(title: str, group_name: str) -> bool:
-    from .wechat_sender import _chat_title_matches
-
-    return _chat_title_matches(title, group_name)
+    target_win = _find_separate_chat_window(group) if group else None
+    test_win = _find_separate_chat_window(test_group) if test_group else None
+    return {
+        "target_group": group,
+        "test_group": test_group,
+        "target_window": bool(target_win),
+        "test_window": bool(test_win),
+        "target_title": (target_win or {}).get("title") or "",
+        "test_title": (test_win or {}).get("title") or "",
+        "windows": windows,
+    }
 
 
 @app.post("/api/wechat/test")

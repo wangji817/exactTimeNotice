@@ -632,15 +632,58 @@ function setStatus(ok, text) {
   dot.className = `status-dot ${ok === true ? "" : ok === false ? "err" : "warn"}`.trim();
 }
 
+function setWindowChip(role, name, connected, title) {
+  const nameEl = $(role === "target" ? "winTargetName" : "winTestName");
+  const stateEl = $(role === "target" ? "winTargetState" : "winTestState");
+  const chip = document.querySelector(`.window-chip[data-role="${role}"]`);
+  if (nameEl) nameEl.textContent = name || "未配置";
+  if (stateEl) {
+    if (!name) {
+      stateEl.textContent = "未配置";
+      stateEl.className = "window-chip-state warn";
+    } else if (connected) {
+      stateEl.textContent = "已连接";
+      stateEl.title = title || name;
+      stateEl.className = "window-chip-state ok";
+    } else {
+      stateEl.textContent = "未找到";
+      stateEl.className = "window-chip-state err";
+    }
+  }
+  if (chip) {
+    chip.classList.toggle("is-ok", !!connected);
+    chip.classList.toggle("is-err", !!name && !connected);
+  }
+}
+
 async function refreshWindows() {
   try {
     const data = await api("/api/wechat/windows");
-    const tOk = data.target_window ? "已连接" : "未找到";
-    const sOk = data.test_window ? "已连接" : "未找到";
-    $("windowStatus").textContent =
-      `独立窗 · 目标「${data.target_group || "—"}」${tOk} · 测试「${data.test_group || "—"}」${sOk}`;
+    setWindowChip(
+      "target",
+      data.target_group || "",
+      !!data.target_window,
+      data.target_title || ""
+    );
+    setWindowChip(
+      "test",
+      data.test_group || "",
+      !!data.test_window,
+      data.test_title || ""
+    );
   } catch (err) {
-    $("windowStatus").textContent = `独立窗状态：获取失败（${err.message || err}）`;
+    setWindowChip("target", "", false, "");
+    setWindowChip("test", "", false, "");
+    const t = $("winTargetState");
+    const s = $("winTestState");
+    if (t) {
+      t.textContent = `获取失败：${err.message || err}`;
+      t.className = "window-chip-state err";
+    }
+    if (s) {
+      s.textContent = "—";
+      s.className = "window-chip-state warn";
+    }
   }
 }
 
@@ -830,12 +873,43 @@ $("btnLogout").addEventListener("click", async () => {
   el.addEventListener("change", syncFeaturePanels);
 });
 
-loadAll().catch((err) => {
-  setStatus(false, "服务未就绪");
-  toast(err.message || String(err), false);
-});
+function layoutMainCards() {
+  const stack = document.querySelector(".main-stack");
+  const grid = document.getElementById("featureGrid");
+  if (!grid) return;
+  const width = (stack && stack.clientWidth) || grid.clientWidth || 0;
+  // 宽屏固定三列：赛季 / 活动 / 普通；窄屏叠成一列
+  const cols = width >= 860 ? 3 : 1;
+  grid.style.setProperty("--main-cols", String(cols));
+  grid.dataset.cols = String(cols);
+}
+
+let layoutTimer = null;
+function scheduleLayoutMainCards() {
+  clearTimeout(layoutTimer);
+  layoutTimer = setTimeout(layoutMainCards, 50);
+}
+
+window.addEventListener("resize", scheduleLayoutMainCards);
+if (window.ResizeObserver) {
+  const stack = document.querySelector(".main-stack");
+  const grid = document.getElementById("featureGrid");
+  if (stack) new ResizeObserver(scheduleLayoutMainCards).observe(stack);
+  if (grid) new ResizeObserver(scheduleLayoutMainCards).observe(grid);
+}
+
+loadAll()
+  .catch((err) => {
+    setStatus(false, "服务未就绪");
+    toast(err.message || String(err), false);
+  })
+  .finally(() => {
+    layoutMainCards();
+  });
 
 setInterval(() => {
   refreshJobs().catch(() => {});
   refreshLogs().catch(() => {});
 }, 15000);
+
+layoutMainCards();
