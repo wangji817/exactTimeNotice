@@ -798,11 +798,43 @@ def _key_chord(modifiers: list[int], vk: int) -> None:
         win32api.keybd_event(m, 0, win32con.KEYEVENTF_KEYUP, 0)
 
 
+def _move_cursor(x: int, y: int) -> None:
+    """移动光标；SetCursorPos 失败时回退绝对坐标 mouse_event（多屏/抢焦点更稳）。"""
+    import ctypes
+
+    import win32api
+    import win32con
+
+    x, y = int(x), int(y)
+    for attempt in range(3):
+        try:
+            win32api.SetCursorPos((x, y))
+            return
+        except Exception as exc:  # noqa: BLE001
+            if attempt == 0:
+                print(f"[Wechat] SetCursorPos 失败，改用绝对移动：{exc}")
+            time.sleep(0.05)
+
+    user32 = ctypes.windll.user32
+    vs_x = int(user32.GetSystemMetrics(76))  # SM_XVIRTUALSCREEN
+    vs_y = int(user32.GetSystemMetrics(77))  # SM_YVIRTUALSCREEN
+    vs_w = max(int(user32.GetSystemMetrics(78)), 1)  # SM_CXVIRTUALSCREEN
+    vs_h = max(int(user32.GetSystemMetrics(79)), 1)  # SM_CYVIRTUALSCREEN
+    abs_x = int((x - vs_x) * 65535 / max(vs_w - 1, 1))
+    abs_y = int((y - vs_y) * 65535 / max(vs_h - 1, 1))
+    flags = (
+        win32con.MOUSEEVENTF_ABSOLUTE
+        | win32con.MOUSEEVENTF_MOVE
+        | 0x4000  # MOUSEEVENTF_VIRTUALDESK
+    )
+    win32api.mouse_event(flags, abs_x, abs_y, 0, 0)
+
+
 def _click_screen(x: int, y: int) -> None:
     import win32api
     import win32con
 
-    win32api.SetCursorPos((int(x), int(y)))
+    _move_cursor(x, y)
     time.sleep(0.05)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
     time.sleep(0.03)
