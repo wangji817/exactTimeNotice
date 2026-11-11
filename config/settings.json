@@ -37,8 +37,7 @@
     "enabled": true,
     "advance_minutes": 5,
     "times": [
-      "12:00",
-      "12:30"
+      "12:00"
     ],
     "cities": [
       "益州",
@@ -100,7 +99,7 @@
     "weekend_cities": [
       "洛阳"
     ],
-    "message": "⚔️ 四方·{mode} · {cities} · 还有 {advance} 分钟"
+    "message": "⚔️ 四方 · {mode} · {cities} · 还有 {advance} 分钟"
   },
   "liu_kou": {
     "at_everyone": false,
